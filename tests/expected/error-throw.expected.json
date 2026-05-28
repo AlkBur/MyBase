@@ -1,0 +1,11 @@
+{
+  "version": 1,
+  "success": false,
+  "output": [],
+  "result": null,
+  "error": {
+    "message": "Тестовая ошибка",
+    "line": 2
+  },
+  "runtimeVersion": "1.2"
+}

@@ -1,0 +1,21 @@
+{
+  "version": 1,
+  "success": true,
+  "output": [
+    {
+      "type": "message",
+      "value": "\nСтрока1\nСтрока2\nСтрока3"
+    },
+    {
+      "type": "message",
+      "value": "Первая\nВторая\nТретья"
+    },
+    {
+      "type": "message",
+      "value": "\n\nПусто\n"
+    }
+  ],
+  "result": null,
+  "error": null,
+  "runtimeVersion": "1.2"
+}

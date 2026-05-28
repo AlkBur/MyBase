@@ -1,0 +1,10 @@
+{
+  "version": 1,
+  "success": false,
+  "output": [],
+  "result": null,
+  "error": {
+    "message": "Функция \"Собщить\" не определена на строке 2"
+  },
+  "runtimeVersion": "1.2"
+}

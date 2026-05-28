@@ -1,0 +1,61 @@
+{
+  "version": 1,
+  "success": true,
+  "output": [
+    {
+      "type": "message",
+      "value": "Да"
+    },
+    {
+      "type": "message",
+      "value": "Нет"
+    },
+    {
+      "type": "message",
+      "value": "1"
+    },
+    {
+      "type": "message",
+      "value": "2"
+    },
+    {
+      "type": "message",
+      "value": "4"
+    },
+    {
+      "type": "message",
+      "value": "6"
+    },
+    {
+      "type": "message",
+      "value": "8"
+    },
+    {
+      "type": "message",
+      "value": "Привет"
+    },
+    {
+      "type": "message",
+      "value": "Привет."
+    },
+    {
+      "type": "message",
+      "value": "Привет!"
+    },
+    {
+      "type": "message",
+      "value": "Привет!!!"
+    },
+    {
+      "type": "message",
+      "value": ""
+    },
+    {
+      "type": "message",
+      "value": "Ошибка при вызове конструктора (Массив)"
+    }
+  ],
+  "result": null,
+  "error": null,
+  "runtimeVersion": "1.2"
+}

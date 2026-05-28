@@ -1,0 +1,45 @@
+{
+  "version": 1,
+  "success": true,
+  "output": [
+    {
+      "type": "message",
+      "value": "3"
+    },
+    {
+      "type": "message",
+      "value": "4"
+    },
+    {
+      "type": "message",
+      "value": "3"
+    },
+    {
+      "type": "message",
+      "value": ""
+    },
+    {
+      "type": "message",
+      "value": "0"
+    },
+    {
+      "type": "message",
+      "value": "2"
+    },
+    {
+      "type": "message",
+      "value": "Тест"
+    },
+    {
+      "type": "message",
+      "value": "25"
+    },
+    {
+      "type": "message",
+      "value": "1"
+    }
+  ],
+  "result": null,
+  "error": null,
+  "runtimeVersion": "1.2"
+}

@@ -1,0 +1,97 @@
+{
+  "version": 1,
+  "success": true,
+  "output": [
+    {
+      "type": "message",
+      "value": "Привет, Мир!"
+    },
+    {
+      "type": "message",
+      "value": "Запрос к базе данных..."
+    },
+    {
+      "type": "message",
+      "value": "Найдено пользователей старше 25: 2"
+    },
+    {
+      "type": "message",
+      "value": "40 + 2 = 42"
+    },
+    {
+      "type": "message",
+      "value": "Текущая дата: 28.05.2026 19:18:53"
+    },
+    {
+      "type": "message",
+      "value": "--- Демо строковых функций ---"
+    },
+    {
+      "type": "message",
+      "value": "Да"
+    },
+    {
+      "type": "message",
+      "value": "Да"
+    },
+    {
+      "type": "message",
+      "value": "Да"
+    },
+    {
+      "type": "message",
+      "value": "Да"
+    },
+    {
+      "type": "message",
+      "value": "Разделили на 3 части"
+    },
+    {
+      "type": "message",
+      "value": "Соединили: a-b-c"
+    },
+    {
+      "type": "message",
+      "value": "0"
+    },
+    {
+      "type": "message",
+      "value": "1"
+    },
+    {
+      "type": "message",
+      "value": "Позиция 'мир': 8"
+    },
+    {
+      "type": "message",
+      "value": "Привет, Иван! Вам 30 лет"
+    },
+    {
+      "type": "message",
+      "value": "Hello"
+    },
+    {
+      "type": "message",
+      "value": "Hello"
+    },
+    {
+      "type": "message",
+      "value": "Нет"
+    },
+    {
+      "type": "message",
+      "value": "Да"
+    },
+    {
+      "type": "message",
+      "value": "Привет, Мир!"
+    },
+    {
+      "type": "message",
+      "value": "Привет, Мир!"
+    }
+  ],
+  "result": null,
+  "error": null,
+  "runtimeVersion": "1.2"
+}

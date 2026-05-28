@@ -1,0 +1,13 @@
+{
+  "version": 1,
+  "success": true,
+  "output": [
+    {
+      "type": "message",
+      "value": "\"А\" \"Б\""
+    }
+  ],
+  "result": null,
+  "error": null,
+  "runtimeVersion": "1.2"
+}

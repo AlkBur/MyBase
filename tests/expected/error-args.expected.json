@@ -1,0 +1,10 @@
+{
+  "version": 1,
+  "success": false,
+  "output": [],
+  "result": null,
+  "error": {
+    "message": "Функция \"Сложить\" ожидает 2 аргументов, передано 3 (строка 6)"
+  },
+  "runtimeVersion": "1.2"
+}

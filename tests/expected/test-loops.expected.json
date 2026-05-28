@@ -1,0 +1,49 @@
+{
+  "version": 1,
+  "success": true,
+  "output": [
+    {
+      "type": "message",
+      "value": "Пока: 0"
+    },
+    {
+      "type": "message",
+      "value": "Пока: 1"
+    },
+    {
+      "type": "message",
+      "value": "Пока: 2"
+    },
+    {
+      "type": "message",
+      "value": "Для: 1"
+    },
+    {
+      "type": "message",
+      "value": "Для: 2"
+    },
+    {
+      "type": "message",
+      "value": "Для: 3"
+    },
+    {
+      "type": "message",
+      "value": "Шаг: 0"
+    },
+    {
+      "type": "message",
+      "value": "Шаг: 2"
+    },
+    {
+      "type": "message",
+      "value": "Шаг: 4"
+    },
+    {
+      "type": "message",
+      "value": "Шаг: 6"
+    }
+  ],
+  "result": null,
+  "error": null,
+  "runtimeVersion": "1.2"
+}

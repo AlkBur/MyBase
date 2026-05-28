@@ -1,0 +1,25 @@
+{
+  "version": 1,
+  "success": true,
+  "output": [
+    {
+      "type": "message",
+      "value": "Нижний: Значение"
+    },
+    {
+      "type": "message",
+      "value": "Верхний: Значение"
+    },
+    {
+      "type": "message",
+      "value": "Смешанный: Значение"
+    },
+    {
+      "type": "message",
+      "value": "После смены регистра: Петр"
+    }
+  ],
+  "result": null,
+  "error": null,
+  "runtimeVersion": "1.2"
+}

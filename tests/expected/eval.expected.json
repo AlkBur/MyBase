@@ -1,0 +1,85 @@
+{
+  "version": 1,
+  "success": true,
+  "output": [
+    {
+      "type": "message",
+      "value": "4"
+    },
+    {
+      "type": "message",
+      "value": "1"
+    },
+    {
+      "type": "message",
+      "value": "ААА"
+    },
+    {
+      "type": "message",
+      "value": "Получено исключение: context.__functions__.get(\"НехорошийМетод\") is not a function. (In 'context.__functions__.get(\"НехорошийМетод\")()', 'context.__functions__.get(\"НехорошийМетод\")' is undefined)"
+    },
+    {
+      "type": "message",
+      "value": "Да"
+    },
+    {
+      "type": "message",
+      "value": "Пока"
+    },
+    {
+      "type": "message",
+      "value": "6"
+    },
+    {
+      "type": "message",
+      "value": "Пока"
+    },
+    {
+      "type": "message",
+      "value": "123"
+    },
+    {
+      "type": "message",
+      "value": "'Return operator may not be used outside procedure or function'"
+    },
+    {
+      "type": "message",
+      "value": "Внутри Выполнить() нельзя использовать \"Возврат\" (строка 2)"
+    },
+    {
+      "type": "message",
+      "value": "3"
+    },
+    {
+      "type": "message",
+      "value": "3"
+    },
+    {
+      "type": "message",
+      "value": "3"
+    },
+    {
+      "type": "message",
+      "value": "3"
+    },
+    {
+      "type": "message",
+      "value": "101"
+    },
+    {
+      "type": "message",
+      "value": "42"
+    },
+    {
+      "type": "message",
+      "value": "108"
+    },
+    {
+      "type": "message",
+      "value": "1"
+    }
+  ],
+  "result": null,
+  "error": null,
+  "runtimeVersion": "1.2"
+}
