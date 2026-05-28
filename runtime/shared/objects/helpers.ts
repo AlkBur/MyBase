@@ -42,6 +42,10 @@ export function isDSLArray(obj: any): obj is any[] {
   return Array.isArray(obj);
 }
 
+export function isDSLFixedArray(obj: any): boolean {
+  return obj != null && obj.__dsl_type__ === "FixedArray";
+}
+
 export function isDSLValueTable(obj: any): boolean {
   return obj != null && obj.__dsl_type__ === "ValueTable";
 }
@@ -64,6 +68,10 @@ export function isDSLStructure(obj: any): boolean {
 
 export function isDSLMap(obj: any): boolean {
   return obj != null && obj.__dsl_type__ === "Map";
+}
+
+export function isDSLFixedMap(obj: any): boolean {
+  return obj != null && obj.__dsl_type__ === "FixedMap";
 }
 
 export function isDSLUUID(obj: any): boolean {

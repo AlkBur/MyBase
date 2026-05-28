@@ -1,0 +1,53 @@
+{
+  "version": 1,
+  "success": true,
+  "output": [
+    {
+      "type": "message",
+      "value": "1) Фиксированное соответствие = Фиксированное соответствие"
+    },
+    {
+      "type": "message",
+      "value": "2) 1 = 1"
+    },
+    {
+      "type": "message",
+      "value": "3) Соответствие = Соответствие"
+    },
+    {
+      "type": "message",
+      "value": "4) 1 = 1"
+    },
+    {
+      "type": "message",
+      "value": "5) Значение1 = Значение1"
+    },
+    {
+      "type": "message",
+      "value": "6) Значение1 = Значение1"
+    },
+    {
+      "type": "message",
+      "value": "7) Значение1 = Значение1"
+    },
+    {
+      "type": "message",
+      "value": "8) Значение1 = Значение1"
+    },
+    {
+      "type": "message",
+      "value": "9) 1 = 1"
+    },
+    {
+      "type": "message",
+      "value": "10) Значение1 = Значение1"
+    },
+    {
+      "type": "message",
+      "value": "11) Неопределено = Неопределено"
+    }
+  ],
+  "result": null,
+  "error": null,
+  "runtimeVersion": "1.3"
+}

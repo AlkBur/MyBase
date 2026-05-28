@@ -36,6 +36,16 @@ const KEYWORDS = new Set([
   "Попытка", "Исключение", "КонецПопытки",
 ]);
 
+/**
+ * Маппинг uppercase → canonical для регистронезависимого распознавания
+ * ключевых слов. Строится автоматически из KEYWORDS.
+ * Пример: "НЕ" → "НЕ", "ЕСЛИ" → "Если", "ПРОЦЕДУРА" → "Процедура"
+ */
+const KEYWORD_CANONICAL: Record<string, string> = {};
+for (const kw of KEYWORDS) {
+  KEYWORD_CANONICAL[kw.toUpperCase()] = kw;
+}
+
 export type TokenType = "KEYWORD" | "IDENTIFIER" | "STRING" | "NUMBER" | "OPERATOR" | "EOF";
 
 export interface Token {
@@ -133,14 +143,18 @@ export function tokenize(source: string): Token[] {
 
     // ---- 7. Слово (буква или _) — ключевое слово или идентификатор ----
     // Юникодные буквы \p{L} позволяют кириллицу и другие алфавиты
+    // Ключевые слова распознаются регистронезависимо: НЕ, Не, не → KEYWORD "НЕ"
     if (/[\p{L}_]/u.test(source.charAt(i))) {
       const start = i;
       const startCol = col;
       while (i < source.length && /[\p{L}\d_]/u.test(source.charAt(i))) { i++; col++; }
       const word = source.slice(start, i);
+      // Нормализуем регистр для KEYWORDS-маппинга, сохраняем каноническую форму
+      const upper = word.toUpperCase();
+      const canonical = KEYWORD_CANONICAL[upper];
       tokens.push({
-        type: KEYWORDS.has(word) ? "KEYWORD" : "IDENTIFIER",
-        value: word,
+        type: canonical ? "KEYWORD" : "IDENTIFIER",
+        value: canonical ?? word,
         line,
         col: startCol,
       });

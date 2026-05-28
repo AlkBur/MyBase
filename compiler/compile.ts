@@ -87,6 +87,7 @@ const ALL_BUILTINS: Record<string, string> = {
   "СтрПолучитьСтроку": "__dsl_strGetLine__",
   "StrGetLine": "__dsl_strGetLine__",
   "Тип": "__dsl_type__",
+  "ТипЗнч": "__dsl_typeOf__",
 };
 
 // ======================================================================
@@ -98,10 +99,12 @@ const ALL_BUILTINS: Record<string, string> = {
 const ALL_CONSTRUCTORS: Record<string, string> = {
   "запрос": "new __dsl_Query__(__dsl_db__)",
   "массив": "__dsl_newArray__",
+  "фиксированныймассив": "__dsl_newFixedArray__",
   "структура": "__dsl_newStructure__",
   "таблицазначений": "__dsl_newValueTable__",
   "описаниетипов": "__dsl_newTypeDescription__",
   "соответствие": "__dsl_newMap__",
+  "фиксированноесоответствие": "__dsl_newFixedMap__",
   "уникальныйидентификатор": "__dsl_newUUID__",
 };
 
@@ -449,9 +452,12 @@ class Compiler {
       expr = `(${inner})`;
     }
     // ---- Унарный НЕ ----
+    // 1С-семантика: НЕ связывает слабее сравнений (a = b), НЕ a = b = НЕ (a = b)
+    // Прецедент 2 позволяет consume =/<>/>/</>=/<= (prec 3) и арифметику (prec 4-5),
+    // но НЕ consume И/ИЛИ (prec 1).
     else if (t.type === "KEYWORD" && t.value === "НЕ") {
       this.consume();
-      expr = `!(${this.parseExpression(6)})`;
+      expr = `!(${this.parseExpression(2)})`;
     }
     // ---- Унарный минус / плюс: -1, +5 ----
     else if (t.type === "OPERATOR" && (t.value === "-" || t.value === "+")) {
@@ -826,8 +832,11 @@ class Compiler {
       // ================================================================
       if (t.type === "KEYWORD" && t.value === "ВызватьИсключение") {
         this.consume();
+        // Без аргумента — ре-брос текущего исключения (1С-семантика)
         if (this.peek().type === "EOF" || this.peek().value === ";") {
-          throw new Error(`После "ВызватьИсключение" ожидается выражение на строке ${t.line}`);
+          this.emit(`throw context.__lastException__;`, t.line);
+          this.expectStatementEnd();
+          continue;
         }
         const expr = this.parseExpression(0);
         this.emit(`throw new __dsl_RuntimeError__(${expr}, ${t.line});`, t.line);

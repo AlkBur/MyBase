@@ -4,6 +4,8 @@
  */
 
 export { createArray } from "./array";
+export { createFixedArray } from "./fixed-array";
+export { createFixedMap } from "./fixed-map";
 export { createStructure } from "./structure";
 export { createValueTable } from "./value-table";
 export { createRow, rowGet, rowSet } from "./value-table-row";
@@ -21,12 +23,14 @@ export {
   defineMethod,
   defineDSLType,
   isDSLArray,
+  isDSLFixedArray,
   isDSLValueTable,
   isDSLValueTableRow,
   isDSLColumns,
   isDSLIndexes,
   isDSLStructure,
   isDSLMap,
+  isDSLFixedMap,
   isDSLUUID,
   isDSLType,
 } from "./helpers";

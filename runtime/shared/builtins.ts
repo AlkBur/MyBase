@@ -18,6 +18,8 @@
 import type { OutputEvent } from "./types";
 import {
   createArray,
+  createFixedArray,
+  createFixedMap,
   createStructure,
   createValueTable,
   createMap,
@@ -31,7 +33,12 @@ import {
   isDSLIndexes,
   isDSLValueTableRow as isRow,
   isDSLMap,
+  isDSLFixedMap,
+  isDSLFixedArray,
+  isDSLUUID,
+  isDSLType,
 } from "./objects";
+import { DSRuntimeError } from "./errors";
 
 /** Интерфейс всех builtin-фабрик. Каждый метод — одна builtin-функция. */
 export type BuiltinFactories = {
@@ -47,13 +54,16 @@ export type BuiltinFactories = {
   __dsl_strMid__: (str: string, start: number, length: number) => string;
   __dsl_strTemplate__: (tmpl: string, ...args: any[]) => string;
   __dsl_nstr__: (src: string, lang?: string) => string;
-  __dsl_newArray__: (size?: number) => any[];
+  __dsl_newArray__: (size?: any) => any[];
+  __dsl_newFixedArray__: (source?: any) => any;
   __dsl_newStructure__: (...args: any[]) => any;
   __dsl_newValueTable__: () => any;
   __dsl_newTypeDescription__: (...types: string[]) => any;
-  __dsl_newMap__: () => any;
+  __dsl_newMap__: (source?: any) => any;
+  __dsl_newFixedMap__: (source?: any) => any;
   __dsl_newUUID__: () => any;
   __dsl_type__: (name: string) => any;
+  __dsl_typeOf__: (value: any) => any;
   __dsl_add__: (a: any, b: any) => any;
   __dsl_string__: (value: any) => string;
   __dsl_strGetLine__: (str: string, line: number) => string;
@@ -175,7 +185,19 @@ export function createBuiltins(output: OutputEvent[]): BuiltinFactories {
 
     // ---- Конструкторы ----
 
-    __dsl_newArray__: (size?: number) => createArray(size),
+    __dsl_newArray__: (source?: any) => {
+      // Copy-constructor из ФиксированныйМассив
+      if (isDSLFixedArray(source)) {
+        const arr = createArray();
+        for (const el of source.__items__) {
+          arr.push(el);
+        }
+        return arr;
+      }
+      return createArray(source);
+    },
+
+    __dsl_newFixedArray__: (source?: any) => createFixedArray(source),
 
     __dsl_newStructure__: (...args: any[]) => createStructure(...args),
 
@@ -194,12 +216,41 @@ export function createBuiltins(output: OutputEvent[]): BuiltinFactories {
       return td;
     },
 
-    __dsl_newMap__: () => createMap(),
+    __dsl_newMap__: (source?: any) => {
+      // Copy-constructor из ФиксированноеСоответствие
+      if (isDSLFixedMap(source)) {
+        const map = createMap();
+        for (const [key, value] of source.__items__.entries()) {
+          map.__map__.set(key, value);
+        }
+        return map;
+      }
+      return createMap();
+    },
+
+    __dsl_newFixedMap__: (source?: any) => createFixedMap(source),
 
     __dsl_newUUID__: () => createUUID(),
 
     // ---- Тип() ----
     __dsl_type__: (name: string) => getDSLType(name),
+
+    // ---- ТипЗнч() ----
+    __dsl_typeOf__: (value: any) => {
+      if (value === undefined) return getDSLType("Неопределено");
+      if (value === null) return getDSLType("Null");
+      if (typeof value === "boolean") return getDSLType("Булево");
+      if (typeof value === "number") return getDSLType("Число");
+      if (typeof value === "string") return getDSLType("Строка");
+      if (isDSLFixedArray(value)) return getDSLType("ФиксированныйМассив");
+      if (Array.isArray(value)) return getDSLType("Массив");
+      if (isDSLFixedMap(value)) return getDSLType("ФиксированноеСоответствие");
+      if (isDSLMap(value)) return getDSLType("Соответствие");
+      if (isDSLUUID(value)) return getDSLType("УникальныйИдентификатор");
+      if (isDSLType(value)) return getDSLType("Тип");
+      if (value instanceof Date) return getDSLType("Дата");
+      return getDSLType("Неопределено");
+    },
 
     // ---- __dsl_add__ (бинарный +) ----
     __dsl_add__: (a: any, b: any) => {
@@ -292,6 +343,26 @@ export function createBuiltins(output: OutputEvent[]): BuiltinFactories {
         return obj.__items__[idx];
       }
 
+      // FixedArray — доступ к элементу по 0-based индексу
+      if (isDSLFixedArray(obj)) {
+        const idx = Number(index);
+        if (idx < 0 || idx >= obj.__items__.length) {
+          throw new Error("Индекс находится за границами массива");
+        }
+        return obj.__items__[idx];
+      }
+
+      // FixedMap — чтение по ключу, бросает исключение при отсутствии
+      if (isDSLFixedMap(obj)) {
+        const normalized = obj.__items__.has(index);
+        if (!normalized) {
+          throw new DSRuntimeError(
+            "Значение, соответствующее ключу, не задано"
+          );
+        }
+        return obj.__items__.get(index);
+      }
+
       // Map — доступ к значению по ключу (identity-based)
       if (isDSLMap(obj)) {
         return obj.__map__.get(index);
@@ -339,10 +410,22 @@ export function createBuiltins(output: OutputEvent[]): BuiltinFactories {
         return;
       }
 
+      // FixedMap — read-only, запись запрещена
+      if (isDSLFixedMap(obj)) {
+        throw new DSRuntimeError(
+          "Индексированное значение доступно только для чтения"
+        );
+      }
+
       // Map — запись по ключу (identity-based)
       if (isDSLMap(obj)) {
         obj.__map__.set(index, value);
         return;
+      }
+
+      // FixedArray — read-only, запись запрещена
+      if (isDSLFixedArray(obj)) {
+        throw new Error("Индексированное значение доступно только для чтения");
       }
 
       // fallback: plain JS access

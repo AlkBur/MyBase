@@ -29,6 +29,7 @@ export function createArray(size?: number): any[] {
 
   defineMethod(arr, "Добавить", (item: any) => { arr.push(item); });
   defineMethod(arr, "Количество", () => arr.length);
+  defineMethod(arr, "ВГраница", () => arr.length - 1);
   defineMethod(arr, "Вставить", (index: number, item: any) => {
     if (index < 0 || index > arr.length) throw new Error("Индекс находится за границами массива");
     arr.splice(index, 0, item);

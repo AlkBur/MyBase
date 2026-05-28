@@ -58,13 +58,11 @@ bun run clean         # удалить data.db и app.exe
     /objects          ← DSL Object Model Layer (v1.3)
       helpers.ts            ← defineMethod, defineDSLType, type guards (isDSL*)
       array.ts              ← Массив (вынесен из builtins.ts)
+      fixed-array.ts        ← ФиксированныйМассив
+      fixed-map.ts          ← ФиксированноеСоответствие (immutable Map, read-only guard, missing key semantics, Получить)
       structure.ts          ← Структура (вариативный конструктор)
-      value-table.ts        ← ТаблицаЗначений (core)
-      value-table-row.ts    ← DSLValueTableRow (case-insensitive storage)
-      value-table-columns.ts ← Колонки (defineProperty по имени)
-      value-table-indexes.ts ← Индексы (stub, без индексного движка)
       map.ts                ← Соответствие (identity-based Map, любые ключи; Date → value-type YYYYMMDD)
-      type.ts               ← Тип() (модульный кэш синглтонов)
+      type.ts               ← Тип() (модульный кэш синглтонов, display-name mapping)
       uuid.ts               ← УникальныйИдентификатор (crypto.randomUUID)
       index.ts              ← re-exports
 
@@ -196,11 +194,13 @@ interface RuntimeCapabilities {
 | `Строка(value)` | — | server, client |
 | `СтрПолучитьСтроку(str, line)` | `StrGetLine(str, line)` | server, client |
 | `Тип(name)` | — | server, client |
+| `ТипЗнч(value)` | — | server, client |
 
 ### Ошибки конструкторов
 
 - `Новый Массив(N)` с невалидным N → `"Ошибка при вызове конструктора (Массив)"`
 - `Вставить(index)` / `Удалить(index)` при index вне границ → `"Индекс находится за границами массива"`
+- `ФиксированныйМассив[index] = value` → `"Индексированное значение доступно только для чтения"`
 - `Новый Соответствие` — identity-based Map (native JS Map), ключи любых типов
 - `Новый УникальныйИдентификатор` — UUID v4 (crypto.randomUUID)
 - `Тип("Строка")` — singleton из модульного кэша, reference identity для ключей Map
@@ -443,6 +443,24 @@ bun run test-update    # перезаписать expected из actual
 - [x] Date-ключи в `Соответствие` — нормализация в YYYYMMDD (value-type в map.ts)
 - [x] `dslCoerceString(Date)` → `YYYYMMDD` (platform-independent, snapshot-safe)
 - [x] `collections.os` — 9 процедур (добавлен тест дат, исправлен Null)
+- [x] `ФиксированныйМассив` — immutable array wrapper, 0-based, read-only guard
+- [x] `ВГраница()` — метод на Массив и ФиксированныйМассив (возвращает Количество - 1)
+- [x] `ТипЗнч(value)` — runtime type introspection (возвращает Тип)
+- [x] `Тип()` — display-name mapping через `TYPE_DISPLAY_NAMES` (ФиксированныйМассив → "Фиксированный массив")
+- [x] `Новый Массив(ФиксированныйМассив)` — copy-constructor из фиксированного в mutable
+- [x] `ВызватьИсключение;` — без аргумента ре-бросит текущее исключение (1С-семантика)
+- [x] `НЕ` — исправлен precedence (разрывал сравнения `=`, `<>`)
+- [x] Tokenizer: регистронезависимые KEYWORD (не, НЕ, Не → "НЕ")
+- [x] `fixed-array.os` — golden test (29 проверок, read-only guard, missing methods)
+- [x] `ФиксированноеСоответствие` — immutable Map wrapper (no Вставить, read-only guard, missing key → throw)
+- [x] `Новый Соответствие(ФиксированноеСоответствие)` — copy-constructor из immutable в mutable
+- [x] `Новый ФиксированноеСоответствие(Соответствие|ФиксированноеСоответствие)` — конструктор (валидация DSL-типов)
+- [x] `ТипЗнч(ФиксСоотв)` → Тип("ФиксированноеСоответствие") (immutable dispatch раньше mutable)
+- [x] `__dsl_index__` dispatch: FixedMap раньше Map, missing key → DSRuntimeError
+- [x] `__dsl_index_set__` для FixedMap: read-only → DSRuntimeError
+- [x] `ФиксСоотв.Получить(key)` → Неопределено (не throw)
+- [x] `TYPE_DISPLAY_NAMES`: "фиксированноесоответствие" → "Фиксированное соответствие"
+- [x] `fixed-map.os` — golden test (11 проверок, immutable semantics, copy-constructor, read-only, Получить)
 
 **v1.4 — Unified member access + real index engine**
 - [ ] `__dsl_member_get__` / `__dsl_member_set__` — unified property dispatch для dot и bracket
