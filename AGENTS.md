@@ -53,11 +53,20 @@ bun run clean         # удалить data.db и app.exe
   /shared
     types.ts          ← ExecuteRequest, ExecutionResult, DSRuntime, OutputEvent, Diagnostic
     errors.ts         ← DSRuntimeError (branded symbol, readonly line)
-    builtins.ts       ← фабрики builtin-функций (capture output[])
+    builtins.ts       ← фабрики builtin-функций (capture output[], делегирует в objects/)
     execute.ts        ← execute() — выбор runtime и выполнение
+    /objects          ← DSL Object Model Layer (v1.3)
+      helpers.ts            ← defineMethod, defineDSLType, type guards (isDSL*)
+      array.ts              ← Массив (вынесен из builtins.ts)
+      structure.ts          ← Структура (вариативный конструктор)
+      value-table.ts        ← ТаблицаЗначений (core)
+      value-table-row.ts    ← DSLValueTableRow (case-insensitive storage)
+      value-table-columns.ts ← Колонки (defineProperty по имени)
+      value-table-indexes.ts ← Индексы (stub, без индексного движка)
+      index.ts              ← re-exports
 
   /server
-    capabilities.ts   ← serverCapabilities (Сообщить, Запрос, Массив, ...)
+    capabilities.ts   ← serverCapabilities (Сообщить, Запрос, Массив, Структура, ТаблицаЗначений, ...)
     runtime.ts        ← ServerRuntime — JIT через new Function(), CaseInsensitiveMap, __dsl_eval__
 
   /client
@@ -84,6 +93,7 @@ bun run clean         # удалить data.db и app.exe
     test-multiline.os           — pipe-синтаксис многострочных строк | 
      test-collections.os         — Массив (Добавить, Вставить, Удалить, Найти, Очистить), Структура (Вставить, Свойство, Удалить, Свойства)
      array.os                    — многомерные массивы, bracket access [index], Новый Массив(N), Перем, indexed assignment
+     ValueTableIndex.os          — ТаблицаЗначений: колонки, индексы (stub), НайтиСтроки, итерация, исключения
 
    /expected           ← golden snapshots (.expected.json)
   runner.ts           ← multi-runtime golden test runner
@@ -95,6 +105,7 @@ index.ts              ← точка входа (server runtime)
 
 /docs
   runtime-semantics.md    ← формальная model execution (scopes, exceptions, recursion, capabilities)
+  object-model.md         ← DSL Object Model layer (invariants, transitional member access, future hardening)
   /design
     prototype-hardening.md ← security note: prototype-chain, deferred design
 ```
@@ -149,8 +160,8 @@ interface RuntimeCapabilities {
 }
 ```
 
-- `SERVER_CAPABILITIES`: все функции + `Вычислить` + `Запрос`, `Массив`, `Структура`
-- `CLIENT_CAPABILITIES`: все функции + `Вычислить` — без `Запрос`
+- `SERVER_CAPABILITIES`: все функции + `Строка`, `Вычислить` + `Запрос`, `Массив`, `Структура`, `ТаблицаЗначений`, `ОписаниеТипов`
+- `CLIENT_CAPABILITIES`: все функции + `Строка`, `Вычислить` — без `Запрос`
 
 Компилятор валидирует доступность для target:
 - `Новый Запрос` в client → `Конструктор "Запрос" недоступен для target=client`
@@ -160,7 +171,7 @@ interface RuntimeCapabilities {
 
 | Русское | Английское | Доступность |
 |---------|-----------|-------------|
-| `Сообщить(...)` | — | server, client |
+| `Сообщить(...)` | — | server, client; булевы → Да/Нет, Неопределено → "" |
 | `ТекущаяДата()` | — | server, client |
 | `Формат(value)` | — | server, client |
 | `СтрНачинаетсяС(str, sub)` | `StrStartsWith(str, sub)` | server, client |
@@ -170,12 +181,17 @@ interface RuntimeCapabilities {
 | `СтрСравнить(a, b)` | `StrCompare(a, b)` | server, client |
 | `СтрНайти(str, sub)` | `StrFind(str, sub)` | server, client |
 | `Сред(str, start, len)` | — | server, client |
-| `Сред(str, start, len)` | — | server, client |
 | `СтрШаблон(tmpl, ...)` | `StrTemplate(tmpl, ...)` | server, client |
 | `НСтр(src, lang?)` | `NStr(src, lang?)` | server, client |
 | `Вычислить(expr)` | — | server, client |
 | `Выполнить(code)` | — | server, client |
 | `ИнформацияОбОшибке()` | — | server, client |
+| `Строка(value)` | — | server, client |
+
+### Ошибки конструкторов
+
+- `Новый Массив(N)` с невалидным N → `"Ошибка при вызове конструктора (Массив)"`
+- `Вставить(index)` / `Удалить(index)` при index вне границ → `"Индекс находится за границами массива"`
 
 ### Statement grammar (дополнения)
 
@@ -233,6 +249,10 @@ interface RuntimeCapabilities {
 | try/catch transpiles to native JS try/catch | intentional — любой throw ловится, но line есть только у DSRuntimeError |
 | eval/exec recursion hard-limit = 500 | intentional — DSRuntimeError, общий счётчик |
 | Shallow `Object.freeze` на ИнформацияОбОшибке | intentional — для v1 достаточно, не deep freeze |
+| `row["К1"]` (bracket) case-insensitive, `row.К1` (dot) — store через `__values__`, read fallback на native | intentional — transitional member access model, unified dispatch до v1.4 |
+| Column rename (`col.Имя = "новое"`) обновляет `defineProperty` + nameIndex + row data + index fields | intentional — rename-каскад через owner-chain, Phase 1 closure |
+| `Индексы` — stub без индексного движка | intentional — real index = mini DB engine, deferred |
+| Bracket write (`row["К1"] = val`) синхронизирует native property | intentional — transitional bridge до `__dsl_member_set__` |
 
 ### Compiler invariants
 
@@ -249,6 +269,8 @@ interface RuntimeCapabilities {
 9. **Eval sandbox NEVER receives `__dsl_db__`, `__dsl_Query__`, `__dsl_exec__`.** Нет эскалации capabilities из eval в exec.
 10. **Capabilities are compile-time validated, not runtime-discovered.** Компилятор проверяет доступность функций/конструкторов на этапе компиляции.
 11. **`;` terminates simple statements, not lines.** Block statements (Если/Для/Попытка/Процедура) self-delimited через Конец*. Empty statements (`;`) tolerated. EOF on last statement tolerated (fragment mode).
+12. **`Знач` in parameter lists is silently skipped.** Поскольку pass-by-reference не поддерживается, `Знач Таблица` эквивалентна `Таблица`. Compiler поглощает `Знач` и не учитывает в арности.
+13. **`.property[index].property` chains are parsed in any order.** `parsePrimary` обрабатывает чередование `.метод/свойство` и `[index]` в любом порядке через while(true)-цикл.
 
 ### Execution envelope
 
@@ -318,7 +340,7 @@ bun run test-update    # перезаписать expected из actual
 - [x] Integration test (eval + цикл + user-функция + context reuse)
 - [x] Экранирование кавычек в строках (`""` → `"`)
 - [x] Многострочные строки (сохранение `\n`, опциональный `|`)
-- [x] Массив (Добавить, Вставить, Удалить, Найти, Очистить, Количество)
+- [x] Массив (0-based API: Вставить, Удалить, Найти → индекс | Неопределено, Количество, Добавить, Очистить)
 - [x] Структура (Вставить, Свойство, Удалить, Свойства, Количество)
 - [x] `Выполнить()` builtin — compileFragment, shared context, shared recursion counter
 - [x] `compileFragment()` — третий entry point (fragment mode, без Процедура/Функция/Перем/Возврат)
@@ -335,6 +357,49 @@ bun run test-update    # перезаписать expected из actual
 - [x] `__dsl_index__` / `__dsl_index_set__` — builtins для bracket access (null-safe)
 - [x] `__dsl_newArray__(size)` — конструктор с опциональным размером
 - [x] `Новый Массив(N)` — парсинг аргументов конструктора
+- [ ] Вложенные процедуры/функции (замыкания)
+- [ ] Client AST interpreter (без `eval`/`new Function`)
+
+**v1.3 — Object Model Layer (реализовано)**
+- [x] `runtime/shared/objects/` — выделение object model layer из builtins.ts
+- [x] `__dsl_string__` builtin — Строка() (Да/Нет/""/toString)
+- [x] `ТаблицаЗначений` — конструктор + базовый API (Добавить, НайтиСтроки)
+- [x] `Колонки` — коллекция с defineProperty по имени (регистронезависимый доступ)
+- [x] `Индексы` — stub (API surface без индексного движка)
+- [x] `DSLValueTableRow` — case-insensitive storage через `__values__`
+- [x] `__dsl_index__` dispatch — routing по `__dsl_type__` (Row, Table, Columns, Indexes)
+- [x] `__dsl_index_set__` readonly guard для Indexes
+- [x] `Структура(ключ, знач, ...)` — вариативный конструктор
+- [x] `ОписаниеТипов(...)` — stub-конструктор
+- [x] `Знач` в параметрах — silent skip (pass-by-reference не поддерживается)
+- [x] `.property[index].property` chains — парсинг в любом порядке
+- [x] `docs/object-model.md` — инварианты объектной модели
+- [x] ValueTableIndex.os — golden test (8 процедур, rename-каскад, поиск, исключения)
+- [x] Column rename semantics — `ColumnDef.Имя` getter/setter c rename-каскадом (defineProperty, nameIndex, row data, index fields)
+- [x] `Свернуть()` — transitional no-op (не throw, не aggregation)
+- [x] `НайтиСтроки` — fallback на native-свойства при dot-access
+- [x] Index field sync — при rename колонки обновляются `__fields__` во всех индексах
+- [x] Row `toString()` — возвращает `"СтрокаТаблицыЗначений"`
+- [x] Bounds checks — Indexes, Columns, ValueTable через `__dsl_index__`
+- [x] Детерминированный number formatter — `formatDslNumber` (regexp, не toLocaleString)
+- [x] Owner-chain — `columns.__owner__`, `indexes.__owner__` для rename-каскада
+
+**v1.4 — Unified member access + real index engine**
+- [ ] `__dsl_member_get__` / `__dsl_member_set__` — unified property dispatch для dot и bracket
+- [ ] Case-insensitive dot-access на ValueTableRow (`row.К1` = `row["К1"]`)
+- [ ] Убрать transitional native-property fallback в НайтиСтроки и __dsl_index__
+- [ ] Real index maintenance — B-tree/hash, НайтиСтроки с индексной оптимизацией
+- [ ] `Свернуть()` — real aggregation (группировка, суммирование)
+- [ ] Column-bound storage — row хранит данные по identity колонки, не по имени
+
+**v1.5 — Типизация и object model hardening**
+- [ ] `ОписаниеТипов` — real type validation (не stub)
+- [ ] Итог / Итого на ТаблицаЗначений
+- [ ] `row.К1` генерирует `__dsl_member_set__("К1", val)` (compile-time)
+- [ ] No accidental prototype-chain access в runtime
+- [ ] Чистка: вынести array/structure обратно в builtins или оставить в objects/ окончательно
+
+**v1.2 items (carried forward)**
 - [ ] Вложенные процедуры/функции (замыкания)
 - [ ] Client AST interpreter (без `eval`/`new Function`)
 

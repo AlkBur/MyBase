@@ -83,6 +83,7 @@ const ALL_BUILTINS: Record<string, string> = {
   "Вычислить": "__dsl_eval__",
   "ИнформацияОбОшибке": "__dsl_errorInfo__",
   "Выполнить": "__dsl_exec__",
+  "Строка": "__dsl_string__",
 };
 
 // ======================================================================
@@ -95,6 +96,8 @@ const ALL_CONSTRUCTORS: Record<string, string> = {
   "запрос": "new __dsl_Query__(__dsl_db__)",
   "массив": "__dsl_newArray__",
   "структура": "__dsl_newStructure__",
+  "таблицазначений": "__dsl_newValueTable__",
+  "описаниетипов": "__dsl_newTypeDescription__",
 };
 
 /** Строит карту builtins, разрешённых для данного runtime */
@@ -202,8 +205,9 @@ class Compiler {
             j++;
             let count = 0;
             // Считаем IDENTIFIERы между скобками (параметры)
+            // Пропускаем модификатор Знач (pass-by-value, в нашей модели игнорируется)
             while (j < this.tokens.length && !(this.tokens[j]?.type === "OPERATOR" && this.tokens[j]?.value === ")")) {
-              if (this.tokens[j]?.type === "IDENTIFIER") count++;
+              if (this.tokens[j]?.type === "IDENTIFIER" && this.tokens[j]?.value.toLowerCase() !== "знач") count++;
               j++;
             }
             this.functionArgCount.set(lowerName, count);
@@ -518,17 +522,20 @@ class Compiler {
       throw new Error(`Неожиданный токен "${t.value}" на строке ${t.line}`);
     }
 
-    // После любого primary-выражения может идти цепочка .метод/.свойство
-    // Например: Функция().Свойство, (expr).Метод(), Новый Массив().Добавить()
-    // Или цепочка [index] для доступа по индексу: Функция()[0]
-    if (this.peek().type === "OPERATOR" && this.peek().value === ".") {
-      expr = this.parseMethodChain(expr);
-    }
-    while (this.peek().type === "OPERATOR" && this.peek().value === "[") {
-      this.consume();
-      const index = this.parseExpression(0);
-      this.expect("OPERATOR", "]");
-      expr = `__dsl_index__(${expr}, ${index})`;
+    // После любого primary-выражения может идти комбинация:
+    //   .метод/.свойство и [index] в любом порядке
+    // Например: Функция()[0].Свойство, Новый Массив()[0].Метод()
+    while (true) {
+      if (this.peek().type === "OPERATOR" && this.peek().value === ".") {
+        expr = this.parseMethodChain(expr);
+      } else if (this.peek().type === "OPERATOR" && this.peek().value === "[") {
+        this.consume();
+        const index = this.parseExpression(0);
+        this.expect("OPERATOR", "]");
+        expr = `__dsl_index__(${expr}, ${index})`;
+      } else {
+        break;
+      }
     }
 
     return expr;
@@ -578,10 +585,15 @@ class Compiler {
         const name = this.expect("IDENTIFIER").value;
         this.expect("OPERATOR", "(");
         const params: string[] = [];
+        // Парсим параметры с опциональным модификатором Знач
         if (this.peek().type === "IDENTIFIER") {
+          // Пропускаем Знач
+          if (this.peek().value.toLowerCase() === "знач") this.consume();
           params.push(this.consume().value);
           while (this.peek().type === "OPERATOR" && this.peek().value === ",") {
             this.consume();
+            // Пропускаем Знач
+            if (this.peek().type === "IDENTIFIER" && this.peek().value.toLowerCase() === "знач") this.consume();
             params.push(this.expect("IDENTIFIER").value);
           }
         }
@@ -623,10 +635,15 @@ class Compiler {
         const name = this.expect("IDENTIFIER").value;
         this.expect("OPERATOR", "(");
         const params: string[] = [];
+        // Парсим параметры с опциональным модификатором Знач
         if (this.peek().type === "IDENTIFIER") {
+          // Пропускаем Знач
+          if (this.peek().value.toLowerCase() === "знач") this.consume();
           params.push(this.consume().value);
           while (this.peek().type === "OPERATOR" && this.peek().value === ",") {
             this.consume();
+            // Пропускаем Знач
+            if (this.peek().type === "IDENTIFIER" && this.peek().value.toLowerCase() === "знач") this.consume();
             params.push(this.expect("IDENTIFIER").value);
           }
         }
@@ -885,6 +902,7 @@ class Compiler {
         }
 
         // 4. Цепочка методов: target.свойство или target.метод()
+        //    Также поддерживает [index] после цепочки: obj.prop[index] = значение
         if (this.peek().type === "OPERATOR" && this.peek().value === ".") {
           let expr = this.emitRead(target);
           while (this.peek().type === "OPERATOR" && this.peek().value === ".") {
@@ -898,11 +916,28 @@ class Compiler {
               expr = `${expr}.${prop}`;
             }
           }
-          // После цепочки может быть присваивание: obj.prop = значение
+          // После цепочки может быть [index] доступ: obj.prop[index]
+          // Для __dsl_index_set__ строим стек объект-индекс пар
+          const bracketStack: Array<{ obj: string; idx: string }> = [];
+          while (this.peek().type === "OPERATOR" && this.peek().value === "[") {
+            this.consume();
+            const index = this.parseExpression(0);
+            this.expect("OPERATOR", "]");
+            bracketStack.push({ obj: expr, idx: index });
+            expr = `__dsl_index__(${expr}, ${index})`;
+          }
+          // После цепочки может быть присваивание: obj.prop[индекс] = значение
           if (this.peek().type === "OPERATOR" && this.peek().value === "=") {
             this.consume();
             const value = this.parseExpression(0);
-            this.emit(`${expr} = ${value};`, t.line);
+            if (bracketStack.length > 0) {
+              // Генерируем __dsl_index_set__ из последней пары объект-индекс
+              const last = bracketStack[bracketStack.length - 1];
+              expr = `__dsl_index_set__(${last.obj}, ${last.idx}, ${value})`;
+            } else {
+              expr = `${expr} = ${value}`;
+            }
+            this.emit(`${expr};`, t.line);
           } else {
             this.emit(`${expr};`, t.line);
           }

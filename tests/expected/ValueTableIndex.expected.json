@@ -1,0 +1,193 @@
+{
+  "version": 1,
+  "success": true,
+  "output": [
+    {
+      "type": "message",
+      "value": "3"
+    },
+    {
+      "type": "message",
+      "value": "2"
+    },
+    {
+      "type": "message",
+      "value": "К_1"
+    },
+    {
+      "type": "message",
+      "value": "К_1"
+    },
+    {
+      "type": "message",
+      "value": "К2"
+    },
+    {
+      "type": "message",
+      "value": "К_1"
+    },
+    {
+      "type": "message",
+      "value": "К2"
+    },
+    {
+      "type": "message",
+      "value": "К3"
+    },
+    {
+      "type": "message",
+      "value": "0"
+    },
+    {
+      "type": "message",
+      "value": "К2"
+    },
+    {
+      "type": "message",
+      "value": "К2"
+    },
+    {
+      "type": "message",
+      "value": "К2"
+    },
+    {
+      "type": "message",
+      "value": "К1"
+    },
+    {
+      "type": "message",
+      "value": "К1, К2"
+    },
+    {
+      "type": "message",
+      "value": "К1, К2, К2"
+    },
+    {
+      "type": "message",
+      "value": "К2, К1, К2"
+    },
+    {
+      "type": "message",
+      "value": "1"
+    },
+    {
+      "type": "message",
+      "value": "1 000"
+    },
+    {
+      "type": "message",
+      "value": "1"
+    },
+    {
+      "type": "message",
+      "value": "1 000"
+    },
+    {
+      "type": "message",
+      "value": "ДругоеИмя"
+    },
+    {
+      "type": "message",
+      "value": "1"
+    },
+    {
+      "type": "message",
+      "value": "1 000"
+    },
+    {
+      "type": "message",
+      "value": "1"
+    },
+    {
+      "type": "message",
+      "value": "1 000"
+    },
+    {
+      "type": "message",
+      "value": "1"
+    },
+    {
+      "type": "message",
+      "value": "1 000"
+    },
+    {
+      "type": "message",
+      "value": "1"
+    },
+    {
+      "type": "message",
+      "value": "1 000"
+    },
+    {
+      "type": "message",
+      "value": "1"
+    },
+    {
+      "type": "message",
+      "value": "1 000"
+    },
+    {
+      "type": "message",
+      "value": "К1"
+    },
+    {
+      "type": "message",
+      "value": ""
+    },
+    {
+      "type": "message",
+      "value": "1"
+    },
+    {
+      "type": "message",
+      "value": "СтрокаТаблицыЗначений"
+    },
+    {
+      "type": "message",
+      "value": "1"
+    },
+    {
+      "type": "message",
+      "value": "СтрокаТаблицыЗначений"
+    },
+    {
+      "type": "message",
+      "value": "1"
+    },
+    {
+      "type": "message",
+      "value": "1"
+    },
+    {
+      "type": "message",
+      "value": "Да"
+    },
+    {
+      "type": "message",
+      "value": "Да"
+    },
+    {
+      "type": "message",
+      "value": "Да"
+    },
+    {
+      "type": "message",
+      "value": "Да"
+    },
+    {
+      "type": "message",
+      "value": "Да"
+    },
+    {
+      "type": "message",
+      "value": "1"
+    },
+    {
+      "type": "message",
+      "value": "Стр2"
+    }
+  ],
+  "result": null,
+  "error": null,
+  "runtimeVersion": "1.3"
+}

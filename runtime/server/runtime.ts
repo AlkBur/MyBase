@@ -147,6 +147,9 @@ const BUILTIN_KEYS: (keyof BuiltinFactories)[] = [
   "__dsl_nstr__",
   "__dsl_newArray__",
   "__dsl_newStructure__",
+  "__dsl_newValueTable__",
+  "__dsl_newTypeDescription__",
+  "__dsl_string__",
   "__dsl_index__",
   "__dsl_errorInfo__",
 ];
