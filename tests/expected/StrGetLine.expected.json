@@ -1,0 +1,25 @@
+{
+  "version": 1,
+  "success": true,
+  "output": [
+    {
+      "type": "message",
+      "value": "1: "
+    },
+    {
+      "type": "message",
+      "value": "2: Стр2"
+    },
+    {
+      "type": "message",
+      "value": "3: "
+    },
+    {
+      "type": "message",
+      "value": "4: Стр10"
+    }
+  ],
+  "result": null,
+  "error": null,
+  "runtimeVersion": "1.3"
+}

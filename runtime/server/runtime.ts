@@ -150,6 +150,7 @@ const BUILTIN_KEYS: (keyof BuiltinFactories)[] = [
   "__dsl_newValueTable__",
   "__dsl_newTypeDescription__",
   "__dsl_string__",
+  "__dsl_strGetLine__",
   "__dsl_index__",
   "__dsl_errorInfo__",
 ];

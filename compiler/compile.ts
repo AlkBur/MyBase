@@ -84,6 +84,8 @@ const ALL_BUILTINS: Record<string, string> = {
   "ИнформацияОбОшибке": "__dsl_errorInfo__",
   "Выполнить": "__dsl_exec__",
   "Строка": "__dsl_string__",
+  "СтрПолучитьСтроку": "__dsl_strGetLine__",
+  "StrGetLine": "__dsl_strGetLine__",
 };
 
 // ======================================================================

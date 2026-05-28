@@ -29,6 +29,7 @@ export const clientCapabilities: RuntimeCapabilities = {
     "ИнформацияОбОшибке",
     "Выполнить",
     "Строка",
+    "СтрПолучитьСтроку", "StrGetLine",
   ],
   constructors: ["Массив", "Структура", "ТаблицаЗначений", "ОписаниеТипов"], // без "Запрос"
   globals: [],

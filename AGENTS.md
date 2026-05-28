@@ -93,7 +93,8 @@ bun run clean         # удалить data.db и app.exe
     test-multiline.os           — pipe-синтаксис многострочных строк | 
      test-collections.os         — Массив (Добавить, Вставить, Удалить, Найти, Очистить), Структура (Вставить, Свойство, Удалить, Свойства)
      array.os                    — многомерные массивы, bracket access [index], Новый Массив(N), Перем, indexed assignment
-     ValueTableIndex.os          — ТаблицаЗначений: колонки, индексы (stub), НайтиСтроки, итерация, исключения
+      StrGetLine.os               — СтрПолучитьСтроку (multiline, 1-based индекс, граничные случаи)
+      ValueTableIndex.os          — ТаблицаЗначений: колонки, индексы (stub), НайтиСтроки, итерация, исключения
 
    /expected           ← golden snapshots (.expected.json)
   runner.ts           ← multi-runtime golden test runner
@@ -187,6 +188,7 @@ interface RuntimeCapabilities {
 | `Выполнить(code)` | — | server, client |
 | `ИнформацияОбОшибке()` | — | server, client |
 | `Строка(value)` | — | server, client |
+| `СтрПолучитьСтроку(str, line)` | `StrGetLine(str, line)` | server, client |
 
 ### Ошибки конструкторов
 

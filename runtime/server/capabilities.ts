@@ -28,6 +28,7 @@ export const serverCapabilities: RuntimeCapabilities = {
     "ИнформацияОбОшибке",
     "Выполнить",
     "Строка",
+    "СтрПолучитьСтроку", "StrGetLine",
   ],
   constructors: ["Запрос", "Массив", "Структура", "ТаблицаЗначений", "ОписаниеТипов"],
   globals: [],

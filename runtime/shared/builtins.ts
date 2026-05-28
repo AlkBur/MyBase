@@ -48,6 +48,7 @@ export type BuiltinFactories = {
   __dsl_newValueTable__: () => any;
   __dsl_newTypeDescription__: (...types: string[]) => any;
   __dsl_string__: (value: any) => string;
+  __dsl_strGetLine__: (str: string, line: number) => string;
   __dsl_index__: (obj: any, index: any) => any;
   __dsl_index_set__: (obj: any, index: any, value: any) => void;
   __dsl_errorInfo__: (context: any) => { Описание: string };
@@ -169,6 +170,22 @@ export function createBuiltins(output: OutputEvent[]): BuiltinFactories {
         return value.toString();
       }
       return String(value);
+    },
+
+    // ---- СтрПолучитьСтроку / StrGetLine ----
+    /**
+     * Возвращает строку по номеру (1-индексированный).
+     * Нормализует \r\n → \n для совместимости с Windows line endings.
+     * При выходе за границы возвращает "" (согласно семантике 1С).
+     *
+     * Реализация: split по \n, возврат lines[line-1] или "".
+     * Альтернатива (indexOf в цикле) — сложнее, без прироста производительности.
+     */
+    __dsl_strGetLine__: (str: string, line: number) => {
+      const normalized = String(str).replace(/\r\n/g, "\n");
+      const lines = normalized.split("\n");
+      if (line < 1 || line > lines.length) return "";
+      return lines[line - 1];
     },
 
     // ---- Доступ по индексу ----
