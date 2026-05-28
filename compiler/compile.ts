@@ -32,8 +32,8 @@
 //    - Разрешённые builtins определяются из capabilities
 // ======================================================================
 
-import { tokenize, Token } from "./tokenize";
-import { RuntimeCapabilities } from "../runtime/shared/types";
+import { tokenize, type Token } from "./tokenize";
+import type { RuntimeCapabilities } from "../runtime/shared/types";
 
 /**
  * AssignTarget — промежуточное представление lvalue для присваивания.
@@ -86,6 +86,7 @@ const ALL_BUILTINS: Record<string, string> = {
   "Строка": "__dsl_string__",
   "СтрПолучитьСтроку": "__dsl_strGetLine__",
   "StrGetLine": "__dsl_strGetLine__",
+  "Тип": "__dsl_type__",
 };
 
 // ======================================================================
@@ -100,6 +101,8 @@ const ALL_CONSTRUCTORS: Record<string, string> = {
   "структура": "__dsl_newStructure__",
   "таблицазначений": "__dsl_newValueTable__",
   "описаниетипов": "__dsl_newTypeDescription__",
+  "соответствие": "__dsl_newMap__",
+  "уникальныйидентификатор": "__dsl_newUUID__",
 };
 
 /** Строит карту builtins, разрешённых для данного runtime */
@@ -329,6 +332,8 @@ class Compiler {
       // Преобразуем сравнение = в ===, <> в !==
       if (op === "=") left = `${left} === ${right}`;
       else if (op === "<>") left = `${left} !== ${right}`;
+      // Бинарный + идёт через __dsl_add__ для 1C-style string coercion
+      else if (op === "+") left = `__dsl_add__(${left}, ${right})`;
       else left = `${left} ${op} ${right}`;
     }
     return left;
@@ -453,6 +458,15 @@ class Compiler {
       this.consume();
       expr = `${t.value}(${this.parseExpression(6)})`;
     }
+    // ---- Date literal 'YYYYMMDD' ----
+    else if (t.type === "DATE") {
+      this.consume();
+      const s = t.value;
+      const y = Number(s.slice(0, 4));
+      const m = Number(s.slice(4, 6));
+      const d = Number(s.slice(6, 8));
+      expr = `new Date(${y}, ${m - 1}, ${d})`;
+    }
     // ---- Новый (конструктор) ----
     else if (t.type === "KEYWORD" && t.value === "Новый") {
       this.consume();
@@ -490,9 +504,10 @@ class Compiler {
       this.consume();
       const name = t.value;
 
-      // Language literals — всегда true/false/undefined независимо от контекста
+      // Language literals — всегда true/false/null/undefined независимо от контекста
       if (name === "Истина") { expr = "true"; }
       else if (name === "Ложь") { expr = "false"; }
+      else if (name === "Null") { expr = "null"; }
       else if (name === "Неопределено") { expr = "undefined"; }
       else {
         // Парсим постфиксную цепочку [index] и другие
@@ -861,8 +876,8 @@ class Compiler {
         this.consume();
         const name = t.value;
 
-        // Языковые литералы как statement: Истина; Ложь; Неопределено;
-        if (name === "Истина" || name === "Ложь" || name === "Неопределено") {
+        // Языковые литералы как statement: Истина; Ложь; Null; Неопределено;
+        if (name === "Истина" || name === "Ложь" || name === "Null" || name === "Неопределено") {
           this.emit("/* noop: literal as statement */", t.line);
           this.expectStatementEnd();
           continue;
@@ -934,7 +949,7 @@ class Compiler {
             const value = this.parseExpression(0);
             if (bracketStack.length > 0) {
               // Генерируем __dsl_index_set__ из последней пары объект-индекс
-              const last = bracketStack[bracketStack.length - 1];
+              const last = bracketStack[bracketStack.length - 1]!;
               expr = `__dsl_index_set__(${last.obj}, ${last.idx}, ${value})`;
             } else {
               expr = `${expr} = ${value}`;

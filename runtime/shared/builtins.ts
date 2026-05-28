@@ -15,11 +15,14 @@
  *   5. Добавить в serverCapabilities / clientCapabilities
  */
 
-import { OutputEvent } from "./types";
+import type { OutputEvent } from "./types";
 import {
   createArray,
   createStructure,
   createValueTable,
+  createMap,
+  createUUID,
+  getDSLType,
   rowGet,
   rowSet,
   isDSLValueTable,
@@ -27,6 +30,7 @@ import {
   isDSLColumns,
   isDSLIndexes,
   isDSLValueTableRow as isRow,
+  isDSLMap,
 } from "./objects";
 
 /** Интерфейс всех builtin-фабрик. Каждый метод — одна builtin-функция. */
@@ -47,6 +51,10 @@ export type BuiltinFactories = {
   __dsl_newStructure__: (...args: any[]) => any;
   __dsl_newValueTable__: () => any;
   __dsl_newTypeDescription__: (...types: string[]) => any;
+  __dsl_newMap__: () => any;
+  __dsl_newUUID__: () => any;
+  __dsl_type__: (name: string) => any;
+  __dsl_add__: (a: any, b: any) => any;
   __dsl_string__: (value: any) => string;
   __dsl_strGetLine__: (str: string, line: number) => string;
   __dsl_index__: (obj: any, index: any) => any;
@@ -71,6 +79,31 @@ export type BuiltinFactories = {
  */
 function formatDslNumber(n: number): string {
   return String(n).replace(/\B(?=(\d{3})+(?!\d))/g, " ");
+}
+
+/**
+ * 1C-style string coercion для бинарного +.
+ * Отличается от toDslString (Сообщить):
+ *   undefined → "Неопределено", а не ""
+ *   null → "Null", а не ""
+ *   true → "Истина", а не "Да"
+ *   false → "Ложь", а не "Нет"
+ *
+ * Это семантика BSL выражения "" + x, а не Сообщить(x).
+ */
+function dslCoerceString(v: unknown): string {
+  if (v === undefined) return "Неопределено";
+  if (v === null) return "Null";
+  if (v === true) return "Да";
+  if (v === false) return "Нет";
+  // Date → YYYYMMDD (platform-independent, timezone-safe)
+  if (v instanceof Date) {
+    const y = v.getFullYear();
+    const m = String(v.getMonth() + 1).padStart(2, "0");
+    const d = String(v.getDate()).padStart(2, "0");
+    return `${y}${m}${d}`;
+  }
+  return String(v);
 }
 
 export function createBuiltins(output: OutputEvent[]): BuiltinFactories {
@@ -161,6 +194,27 @@ export function createBuiltins(output: OutputEvent[]): BuiltinFactories {
       return td;
     },
 
+    __dsl_newMap__: () => createMap(),
+
+    __dsl_newUUID__: () => createUUID(),
+
+    // ---- Тип() ----
+    __dsl_type__: (name: string) => getDSLType(name),
+
+    // ---- __dsl_add__ (бинарный +) ----
+    __dsl_add__: (a: any, b: any) => {
+      // Числовое сложение
+      if (typeof a === "number" && typeof b === "number") {
+        return a + b;
+      }
+      // Конкатенация, если хотя бы один операнд строка
+      if (typeof a === "string" || typeof b === "string") {
+        return dslCoerceString(a) + dslCoerceString(b);
+      }
+      // Всё остальное — делегируем JS
+      return (a as any) + (b as any);
+    },
+
     // ---- Строка() ----
     __dsl_string__: (value: any) => {
       if (value === undefined || value === null) return "";
@@ -185,7 +239,7 @@ export function createBuiltins(output: OutputEvent[]): BuiltinFactories {
       const normalized = String(str).replace(/\r\n/g, "\n");
       const lines = normalized.split("\n");
       if (line < 1 || line > lines.length) return "";
-      return lines[line - 1];
+      return lines[line - 1] ?? "";
     },
 
     // ---- Доступ по индексу ----
@@ -238,6 +292,11 @@ export function createBuiltins(output: OutputEvent[]): BuiltinFactories {
         return obj.__items__[idx];
       }
 
+      // Map — доступ к значению по ключу (identity-based)
+      if (isDSLMap(obj)) {
+        return obj.__map__.get(index);
+      }
+
       // fallback: plain JS access
       // TODO: prototype-chain traversal currently allowed.
       // Hardened runtime will restrict to own-properties only.
@@ -277,6 +336,12 @@ export function createBuiltins(output: OutputEvent[]): BuiltinFactories {
       // Columns — запись колонки по индексу
       if (isDSLColumns(obj)) {
         obj.__items__[index] = value;
+        return;
+      }
+
+      // Map — запись по ключу (identity-based)
+      if (isDSLMap(obj)) {
+        obj.__map__.set(index, value);
         return;
       }
 

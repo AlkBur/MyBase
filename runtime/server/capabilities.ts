@@ -9,7 +9,7 @@
 //  урезанный набор (без Запрос).
 // ======================================================================
 
-import { RuntimeCapabilities } from "../shared/types";
+import type { RuntimeCapabilities } from "../shared/types";
 
 export const serverCapabilities: RuntimeCapabilities = {
   name: "server",
@@ -29,7 +29,8 @@ export const serverCapabilities: RuntimeCapabilities = {
     "Выполнить",
     "Строка",
     "СтрПолучитьСтроку", "StrGetLine",
+    "Тип",
   ],
-  constructors: ["Запрос", "Массив", "Структура", "ТаблицаЗначений", "ОписаниеТипов"],
+  constructors: ["Запрос", "Массив", "Структура", "ТаблицаЗначений", "ОписаниеТипов", "Соответствие", "УникальныйИдентификатор"],
   globals: [],
 };

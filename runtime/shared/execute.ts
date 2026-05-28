@@ -18,7 +18,7 @@
 //    const result = execute({ code: "..." }, rt);
 // ======================================================================
 
-import { ExecuteRequest, ExecutionResult, DSRuntime } from "./types";
+import type { ExecuteRequest, ExecutionResult, DSRuntime } from "./types";
 import { ServerRuntime } from "../server/runtime";
 import { serverCapabilities } from "../server/capabilities";
 

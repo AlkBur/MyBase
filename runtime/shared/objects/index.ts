@@ -12,6 +12,10 @@ export { createValueTableColumns } from "./value-table-columns";
 export type { ColumnDef } from "./value-table-columns";
 export { createValueTableIndexes } from "./value-table-indexes";
 export type { DSLIndexDef } from "./value-table-indexes";
+export { createMap } from "./map";
+export { getDSLType } from "./type";
+export type { DSLType } from "./type";
+export { createUUID } from "./uuid";
 
 export {
   defineMethod,
@@ -22,4 +26,7 @@ export {
   isDSLColumns,
   isDSLIndexes,
   isDSLStructure,
+  isDSLMap,
+  isDSLUUID,
+  isDSLType,
 } from "./helpers";

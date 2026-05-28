@@ -8,7 +8,7 @@ import { join } from "path";
 import { Database } from "bun:sqlite";
 import { ServerRuntime } from "../runtime/server/runtime";
 import { ClientRuntime } from "../runtime/client/runtime";
-import { ExecutionResult, ExecuteRequest, DSRuntime } from "../runtime/shared/types";
+import type { ExecutionResult, ExecuteRequest, DSRuntime } from "../runtime/shared/types";
 
 const UPDATE_GOLDENS = process.argv.includes("--update");
 const CASES_DIR = join(import.meta.dir, "cases");

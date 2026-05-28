@@ -31,11 +31,12 @@
 
 import { Database } from "bun:sqlite";
 import { compile, compileExpression, compileFragment } from "../../compiler/compile";
-import { createBuiltins, BuiltinFactories, formatOutput } from "../shared/builtins";
-import {
+import { createBuiltins, formatOutput } from "../shared/builtins";
+import type { BuiltinFactories } from "../shared/builtins";
+import { RUNTIME_VERSION } from "../shared/types";
+import type {
   DSRuntime, RuntimeCapabilities, RuntimeError,
   ExecuteRequest, ExecutionResult, OutputEvent,
-  RUNTIME_VERSION,
 } from "../shared/types";
 import { DSRuntimeError } from "../shared/errors";
 import { serverCapabilities } from "./capabilities";
@@ -149,6 +150,10 @@ const BUILTIN_KEYS: (keyof BuiltinFactories)[] = [
   "__dsl_newStructure__",
   "__dsl_newValueTable__",
   "__dsl_newTypeDescription__",
+  "__dsl_newMap__",
+  "__dsl_newUUID__",
+  "__dsl_type__",
+  "__dsl_add__",
   "__dsl_string__",
   "__dsl_strGetLine__",
   "__dsl_index__",

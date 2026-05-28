@@ -18,7 +18,7 @@ import { createRow, rowGet } from "./value-table-row";
 import type { DSLValueTableRow } from "./value-table-row";
 import { createValueTableColumns } from "./value-table-columns";
 import { createValueTableIndexes } from "./value-table-indexes";
-import type { DSLIndexDef, ValueTableIndexes } from "./value-table-indexes";
+
 import { defineMethod, defineDSLType, isDSLValueTableRow, isDSLStructure } from "./helpers";
 import { DSRuntimeError } from "../errors";
 import { isDSLArray } from "./helpers";

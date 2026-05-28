@@ -27,6 +27,8 @@ import { defineMethod, defineDSLType } from "./helpers";
 export type DSLIndexDef = {
   __dsl_type__: "ValueTableIndex";
   __fields__: string[];
+  __clearFields__: () => void;
+  __renameField__: (oldName: string, newName: string) => void;
   /** 0-based доступ к имени поля */
   [index: number]: string;
   /** Строковое представление: "К1, К2, К3" */

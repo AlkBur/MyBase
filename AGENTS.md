@@ -45,7 +45,7 @@ bun run clean         # удалить data.db и app.exe
 
 ```
 /compiler
-  tokenize.ts         ← токенизатор (в т.ч. ВызватьИсключение, Попытка, multline strings)
+  tokenize.ts         ← токенизатор (в т.ч. ВызватьИсключение, Попытка, multline strings, DATE 'YYYYMMDD', decimal числа 3.14)
   ast.ts              ← AST Node types (декларативно)
   compile.ts          ← Program + Expression compiler (Compiler class)
 
@@ -63,6 +63,9 @@ bun run clean         # удалить data.db и app.exe
       value-table-row.ts    ← DSLValueTableRow (case-insensitive storage)
       value-table-columns.ts ← Колонки (defineProperty по имени)
       value-table-indexes.ts ← Индексы (stub, без индексного движка)
+      map.ts                ← Соответствие (identity-based Map, любые ключи; Date → value-type YYYYMMDD)
+      type.ts               ← Тип() (модульный кэш синглтонов)
+      uuid.ts               ← УникальныйИдентификатор (crypto.randomUUID)
       index.ts              ← re-exports
 
   /server
@@ -95,6 +98,7 @@ bun run clean         # удалить data.db и app.exe
      array.os                    — многомерные массивы, bracket access [index], Новый Массив(N), Перем, indexed assignment
       StrGetLine.os               — СтрПолучитьСтроку (multiline, 1-based индекс, граничные случаи)
       ValueTableIndex.os          — ТаблицаЗначений: колонки, индексы (stub), НайтиСтроки, итерация, исключения
+      collections.os              — Соответствие (ключи всех типов: undefined, null, boolean, number, string, Date, UUID, Тип)
 
    /expected           ← golden snapshots (.expected.json)
   runner.ts           ← multi-runtime golden test runner
@@ -133,6 +137,8 @@ index.ts              ← точка входа (server runtime)
    - Для Каждого: `for(const __item__ of __iterable__) { set(var, __item__); body }` + scope cleanup
    - Доступ по индексу: `__dsl_index__(obj, idx)` / `__dsl_index_set__(obj, idx, val)` — null-safe
    - `AssignTarget: { kind: "variable" | "index", object, name, index }` — lvalue для присваивания
+   - Language literals: `Истина→true`, `Ложь→false`, `Null→null`, `Неопределено→undefined`
+   - Date literal `'YYYYMMDD'`: `DATE` token → `new Date(y, m-1, d)` в parsePrimary
 
 4. **Песочница** — `new Function()` с контролируемыми параметрами:
    - `context` — `{ __variables__: CaseInsensitiveMap, __functions__: CaseInsensitiveMap }`
@@ -161,8 +167,8 @@ interface RuntimeCapabilities {
 }
 ```
 
-- `SERVER_CAPABILITIES`: все функции + `Строка`, `Вычислить` + `Запрос`, `Массив`, `Структура`, `ТаблицаЗначений`, `ОписаниеТипов`
-- `CLIENT_CAPABILITIES`: все функции + `Строка`, `Вычислить` — без `Запрос`
+- `SERVER_CAPABILITIES`: все функции + `Строка`, `Вычислить`, `Тип` + `Запрос`, `Массив`, `Структура`, `ТаблицаЗначений`, `ОписаниеТипов`, `Соответствие`, `УникальныйИдентификатор`
+- `CLIENT_CAPABILITIES`: все функции + `Строка`, `Вычислить`, `Тип` — без `Запрос`
 
 Компилятор валидирует доступность для target:
 - `Новый Запрос` в client → `Конструктор "Запрос" недоступен для target=client`
@@ -189,11 +195,15 @@ interface RuntimeCapabilities {
 | `ИнформацияОбОшибке()` | — | server, client |
 | `Строка(value)` | — | server, client |
 | `СтрПолучитьСтроку(str, line)` | `StrGetLine(str, line)` | server, client |
+| `Тип(name)` | — | server, client |
 
 ### Ошибки конструкторов
 
 - `Новый Массив(N)` с невалидным N → `"Ошибка при вызове конструктора (Массив)"`
 - `Вставить(index)` / `Удалить(index)` при index вне границ → `"Индекс находится за границами массива"`
+- `Новый Соответствие` — identity-based Map (native JS Map), ключи любых типов
+- `Новый УникальныйИдентификатор` — UUID v4 (crypto.randomUUID)
+- `Тип("Строка")` — singleton из модульного кэша, reference identity для ключей Map
 
 ### Statement grammar (дополнения)
 
@@ -204,6 +214,31 @@ interface RuntimeCapabilities {
 - `Для Каждого <var> Из <expr> Цикл ... КонецЦикла` — итерация по коллекции, transpile to for-of + scope cleanup
 - `;` на верхнем уровне (пустой statement) — разрешён, игнорируется через `while (peek === ";")` в начале parse loop
 - `Перем <name>;` — no-op декларация, токены до `;` потребляются (DSL создаёт переменные автоматически)
+
+### Language literals
+
+| DSL | JS | Комментарий |
+|-----|----|-------------|
+| `Истина` | `true` | language literal |
+| `Ложь` | `false` | language literal |
+| `Null` | `null` | language literal (не lookup переменной) |
+| `Неопределено` | `undefined` | language literal |
+| `'20240101'` | `new Date(2024, 0, 1)` | DATE token, ровно 8 цифр |
+
+`Null` — отдельный language literal, исторически был упущен; без фикса `Соотв[Null]` читал переменную `Null` (undefined) и перезаписывал ключ `Неопределено`.
+
+### Бинарный `+` и BSL string coercion
+
+`+` транслируется в `__dsl_add__(left, right)`:
+- `number + number` → числовое сложение
+- `string + any` / `any + string` → конкатенация с BSL-правилами:
+  - `undefined` → `"Неопределено"`
+  - `null` → `"Null"`
+  - `true` → `"Да"`
+  - `false` → `"Нет"`
+  - `Date` → `YYYYMMDD` (детерминированно, platform-independent)
+  - остальное → `String(value)`
+- Прочие типы → делегат нативный JS `+`
 
 ### Expression engine — `Вычислить(expr)`
 
@@ -255,6 +290,15 @@ interface RuntimeCapabilities {
 | Column rename (`col.Имя = "новое"`) обновляет `defineProperty` + nameIndex + row data + index fields | intentional — rename-каскад через owner-chain, Phase 1 closure |
 | `Индексы` — stub без индексного движка | intentional — real index = mini DB engine, deferred |
 | Bracket write (`row["К1"] = val`) синхронизирует native property | intentional — transitional bridge до `__dsl_member_set__` |
+| `Соответствие` — identity-based Map (native JS Map) | intentional — ключи любых типов, без lowercasing/stringification |
+| `Тип("Строка")` возвращает модульный singleton | intentional — reference identity для ключей Map и `===` |
+| `УникальныйИдентификатор` — `crypto.randomUUID()` | intentional — каждый вызов новый UUID, без парсинга строк |
+| `3.14` (десятичные числа) — единый токен | intentional — tokenizer читает `.`+цифры как часть числа |
+| `__dsl_add__` перехватывает `+` для BSL coercion | intentional — `undefined+"x"` → `"Неопределеноx"`, а не `"undefinedx"`; boolean `true` → `"Да"`/`"Нет"`, единая семантика с `Сообщить` |
+| `Date` в `dslCoerceString` → `YYYYMMDD` | intentional — стабильные golden snapshots, не зависит от locale/timezone |
+| `Null` — language literal, не lookup переменной | intentional — `Соотв[Null]` ≠ `Соотв[Неопределено]` |
+| Date-ключи в `Соответствие` нормализуются в YYYYMMDD | intentional — JS Date reference type, DSL date value type |
+| Date literal `'YYYYMMDD'` — единый токен DATE | intentional — только 8 цифр, без времени и таймзоны |
 
 ### Compiler invariants
 
@@ -273,6 +317,9 @@ interface RuntimeCapabilities {
 11. **`;` terminates simple statements, not lines.** Block statements (Если/Для/Попытка/Процедура) self-delimited через Конец*. Empty statements (`;`) tolerated. EOF on last statement tolerated (fragment mode).
 12. **`Знач` in parameter lists is silently skipped.** Поскольку pass-by-reference не поддерживается, `Знач Таблица` эквивалентна `Таблица`. Compiler поглощает `Знач` и не учитывает в арности.
 13. **`.property[index].property` chains are parsed in any order.** `parsePrimary` обрабатывает чередование `.метод/свойство` и `[index]` в любом порядке через while(true)-цикл.
+14. **`+` in expression mode generates `__dsl_add__(...)` for BSL coercion.** Всегда, не только когда операнд строка. Компилятор не знает типов на этапе компиляции.
+15. **Date literals compile to `new Date(y, m-1, d)`, not strings.** Сохраняет type identity для `__dsl_type__` dispatch. Runtime-нормализация в Map приводит Date к YYYYMMDD.
+16. **`Null` is a language literal, not a variable.** Компилятор генерирует `null` для `Null` на уровне parsePrimary, без lookup через context.__variables__.
 
 ### Execution envelope
 
@@ -359,9 +406,6 @@ bun run test-update    # перезаписать expected из actual
 - [x] `__dsl_index__` / `__dsl_index_set__` — builtins для bracket access (null-safe)
 - [x] `__dsl_newArray__(size)` — конструктор с опциональным размером
 - [x] `Новый Массив(N)` — парсинг аргументов конструктора
-- [ ] Вложенные процедуры/функции (замыкания)
-- [ ] Client AST interpreter (без `eval`/`new Function`)
-
 **v1.3 — Object Model Layer (реализовано)**
 - [x] `runtime/shared/objects/` — выделение object model layer из builtins.ts
 - [x] `__dsl_string__` builtin — Строка() (Да/Нет/""/toString)
@@ -385,6 +429,20 @@ bun run test-update    # перезаписать expected из actual
 - [x] Bounds checks — Indexes, Columns, ValueTable через `__dsl_index__`
 - [x] Детерминированный number formatter — `formatDslNumber` (regexp, не toLocaleString)
 - [x] Owner-chain — `columns.__owner__`, `indexes.__owner__` для rename-каскада
+- [x] `Соответствие` — identity-based Map (native JS Map, ключи любых типов)
+- [x] `УникальныйИдентификатор` — UUID v4 (crypto.randomUUID)
+- [x] `Тип("Строка")` — singleton из модульного кэша, reference identity для ключей Map
+- [x] `__dsl_add__` — бинарный `+` с BSL string coercion (undefined→Неопределено, true→Истина и т.д.)
+- [x] `dslCoerceString` — отдельная функция для BSL-приведения в `+`
+- [x] Tokenizer: десятичные числа (`3.14`) — единый токен NUMBER
+- [x] `__dsl_index__` dispatch — routing по `__dsl_type__` (добавлен Map)
+- [x] `collections.os` — golden test (8 процедур, Соответствие с ключами всех типов)
+- [x] `objects/map.ts`, `objects/type.ts`, `objects/uuid.ts` — новые файлы объектной модели
+- [x] Date literal `'YYYYMMDD'` — токен DATE (tokenize.ts), new Date(y,m-1,d) (compile.ts)
+- [x] `Null` — language literal, не lookup переменной (compile.ts parsePrimary)
+- [x] Date-ключи в `Соответствие` — нормализация в YYYYMMDD (value-type в map.ts)
+- [x] `dslCoerceString(Date)` → `YYYYMMDD` (platform-independent, snapshot-safe)
+- [x] `collections.os` — 9 процедур (добавлен тест дат, исправлен Null)
 
 **v1.4 — Unified member access + real index engine**
 - [ ] `__dsl_member_get__` / `__dsl_member_set__` — unified property dispatch для dot и bracket

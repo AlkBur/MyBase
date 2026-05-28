@@ -10,7 +10,7 @@
 //  в client режиме даст ошибку компиляции.
 // ======================================================================
 
-import { RuntimeCapabilities } from "../shared/types";
+import type { RuntimeCapabilities } from "../shared/types";
 
 export const clientCapabilities: RuntimeCapabilities = {
   name: "client",
@@ -30,7 +30,8 @@ export const clientCapabilities: RuntimeCapabilities = {
     "Выполнить",
     "Строка",
     "СтрПолучитьСтроку", "StrGetLine",
+    "Тип",
   ],
-  constructors: ["Массив", "Структура", "ТаблицаЗначений", "ОписаниеТипов"], // без "Запрос"
+  constructors: ["Массив", "Структура", "ТаблицаЗначений", "ОписаниеТипов", "Соответствие", "УникальныйИдентификатор"], // без "Запрос"
   globals: [],
 };

@@ -1,0 +1,141 @@
+{
+  "version": 1,
+  "success": true,
+  "output": [
+    {
+      "type": "message",
+      "value": "1 = 1"
+    },
+    {
+      "type": "message",
+      "value": "Да = Да"
+    },
+    {
+      "type": "message",
+      "value": "1 = 1"
+    },
+    {
+      "type": "message",
+      "value": "Значение для Null = Значение для Null"
+    },
+    {
+      "type": "message",
+      "value": "2 = 2"
+    },
+    {
+      "type": "message",
+      "value": "Значение для Истина = Значение для Истина"
+    },
+    {
+      "type": "message",
+      "value": "Значение для Ложь = Значение для Ложь"
+    },
+    {
+      "type": "message",
+      "value": "4 = 4"
+    },
+    {
+      "type": "message",
+      "value": "Значение для 42 = Значение для 42"
+    },
+    {
+      "type": "message",
+      "value": "Значение для 0 = Значение для 0"
+    },
+    {
+      "type": "message",
+      "value": "Значение для -100 = Значение для -100"
+    },
+    {
+      "type": "message",
+      "value": "Значение для 3.14 = Значение для 3.14"
+    },
+    {
+      "type": "message",
+      "value": "3 = 3"
+    },
+    {
+      "type": "message",
+      "value": "Значение1 = Значение1"
+    },
+    {
+      "type": "message",
+      "value": "Значение2 = Значение2"
+    },
+    {
+      "type": "message",
+      "value": "Значение для пустой строки = Значение для пустой строки"
+    },
+    {
+      "type": "message",
+      "value": "2 = 2"
+    },
+    {
+      "type": "message",
+      "value": "Значение для Дата1 = Значение для Дата1"
+    },
+    {
+      "type": "message",
+      "value": "Значение для Дата2 = Значение для Дата2"
+    },
+    {
+      "type": "message",
+      "value": "2 = 2"
+    },
+    {
+      "type": "message",
+      "value": "Значение для УИД1 = Значение для УИД1"
+    },
+    {
+      "type": "message",
+      "value": "Значение для УИД2 = Значение для УИД2"
+    },
+    {
+      "type": "message",
+      "value": "2 = 2"
+    },
+    {
+      "type": "message",
+      "value": "Значение для Тип Строка = Значение для Тип Строка"
+    },
+    {
+      "type": "message",
+      "value": "Значение для Тип Число = Значение для Тип Число"
+    },
+    {
+      "type": "message",
+      "value": "7 = 7"
+    },
+    {
+      "type": "message",
+      "value": "Неопределено = Неопределено"
+    },
+    {
+      "type": "message",
+      "value": "Null = Null"
+    },
+    {
+      "type": "message",
+      "value": "Истина = Истина"
+    },
+    {
+      "type": "message",
+      "value": "Число = Число"
+    },
+    {
+      "type": "message",
+      "value": "Строка = Строка"
+    },
+    {
+      "type": "message",
+      "value": "Дата = Дата"
+    },
+    {
+      "type": "message",
+      "value": "Тип = Тип"
+    }
+  ],
+  "result": null,
+  "error": null,
+  "runtimeVersion": "1.3"
+}

@@ -102,11 +102,16 @@ export function tokenize(source: string): Token[] {
       continue;
     }
 
-    // ---- 4. Число ----
+    // ---- 4. Число (включая десятичные 3.14) ----
     if (/\d/.test(source.charAt(i))) {
       const start = i;
       const startCol = col;
       while (i < source.length && /\d/.test(source.charAt(i))) { i++; col++; }
+      // Десятичная часть: если следующий символ . и за ним цифра
+      if (source[i] === "." && i + 1 < source.length && /\d/.test(source[i + 1])) {
+        i++; col++; // потребляем .
+        while (i < source.length && /\d/.test(source.charAt(i))) { i++; col++; }
+      }
       tokens.push({ type: "NUMBER", value: source.slice(start, i), line, col: startCol });
       continue;
     }
@@ -142,7 +147,27 @@ export function tokenize(source: string): Token[] {
       continue;
     }
 
-    // ---- 8. Всё остальное — ошибка ----
+    // ---- 8. Date literal 'YYYYMMDD' ----
+    if (source[i] === "'") {
+      const startLine = line;
+      const startCol = col;
+      i++; col++;
+      let value = "";
+      while (i < source.length && source[i] !== "'") {
+        value += source[i]; i++; col++;
+      }
+      if (i >= source.length) {
+        throw new Error(`Незакрытая дата на строке ${startLine}`);
+      }
+      i++; col++;
+      if (!/^\d{8}$/.test(value)) {
+        throw new Error(`Неверный формат даты '${value}' на строке ${startLine}`);
+      }
+      tokens.push({ type: "DATE", value, line: startLine, col: startCol });
+      continue;
+    }
+
+    // ---- 9. Всё остальное — ошибка ----
     throw new Error(`Неизвестный символ '${source.charAt(i)}' на строке ${line}`);
   }
 

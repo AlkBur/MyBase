@@ -61,3 +61,15 @@ export function isDSLIndexes(obj: any): boolean {
 export function isDSLStructure(obj: any): boolean {
   return obj != null && obj.__dsl_type__ === "Структура";
 }
+
+export function isDSLMap(obj: any): boolean {
+  return obj != null && obj.__dsl_type__ === "Map";
+}
+
+export function isDSLUUID(obj: any): boolean {
+  return obj != null && obj.__dsl_type__ === "UniqueIdentifier";
+}
+
+export function isDSLType(obj: any): boolean {
+  return obj != null && obj.__dsl_type__ === "Type";
+}

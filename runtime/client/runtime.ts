@@ -14,7 +14,8 @@
 //  Текущий статус: заглушка, возвращает ошибку.
 // ======================================================================
 
-import { ExecuteRequest, ExecutionResult, RUNTIME_VERSION } from "../shared/types";
+import { RUNTIME_VERSION } from "../shared/types";
+import type { ExecuteRequest, ExecutionResult } from "../shared/types";
 import { clientCapabilities } from "./capabilities";
 import type { DSRuntime, RuntimeCapabilities } from "../shared/types";
 
