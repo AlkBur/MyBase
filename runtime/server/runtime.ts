@@ -34,6 +34,7 @@ import { compile, compileExpression, compileFragment } from "../../compiler/comp
 import { createBuiltins, formatOutput } from "../shared/builtins";
 import type { BuiltinFactories } from "../shared/builtins";
 import { RUNTIME_VERSION } from "../shared/types";
+import { DiagnosticsCollector } from "../shared/diagnostics";
 import type {
   DSRuntime, RuntimeCapabilities, RuntimeError,
   ExecuteRequest, ExecutionResult, OutputEvent,
@@ -225,6 +226,7 @@ export class ServerRuntime implements DSRuntime {
   execute(request: ExecuteRequest): ExecutionResult {
     const output: OutputEvent[] = [];
     const builtins = createBuiltins(output);
+    const diagnostics = new DiagnosticsCollector();
     let compileTime = 0;
     let executeTime = 0;
 
@@ -242,7 +244,7 @@ export class ServerRuntime implements DSRuntime {
       const cacheKey = `${RUNTIME_VERSION}|${this.capabilities.name}|${request.code}`;
       let entry = this.jsCache.get(cacheKey);
       if (!entry) {
-        const { jsCode, lineMap } = compile(request.code, this.capabilities);
+        const { jsCode, lineMap } = compile(request.code, this.capabilities, { diagnostics });
         const fn = this.buildSandboxFn(jsCode);
         entry = { fn, lineMap };
         this.jsCache.set(cacheKey, entry);
@@ -269,6 +271,7 @@ export class ServerRuntime implements DSRuntime {
         output,
         result: result !== undefined ? result : undefined,
         error: undefined,
+        diagnostics: diagnostics.hasErrors() || diagnostics.hasWarnings() ? diagnostics.toArray() as any : undefined,
         runtimeVersion: RUNTIME_VERSION,
         timing: {
           parse: 0,
@@ -289,6 +292,7 @@ export class ServerRuntime implements DSRuntime {
         success: false,
         output,
         error,
+        diagnostics: diagnostics.hasErrors() || diagnostics.hasWarnings() ? diagnostics.toArray() as any : undefined,
         runtimeVersion: RUNTIME_VERSION,
       };
     }

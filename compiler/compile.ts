@@ -34,6 +34,7 @@
 
 import { tokenize, type Token } from "./tokenize";
 import type { RuntimeCapabilities } from "../runtime/shared/types";
+import type { DiagnosticsCollector } from "../runtime/shared/diagnostics";
 
 /**
  * AssignTarget — промежуточное представление lvalue для присваивания.
@@ -180,13 +181,16 @@ class Compiler {
   private mode: "program" | "expression" | "fragment" = "program";
   /** Счётчик для генерации уникальных имён переменных в Для Каждого (избегает redeclare) */
   private forEachCounter = 0;
+  /** Опциональный сборщик диагностики (compile-time only) */
+  private diag?: DiagnosticsCollector;
 
   /** Токены, запрещённые в fragment-mode (compileFragment) */
   private static FORBIDDEN_IN_FRAGMENT = new Set(["Процедура", "Функция", "Перем", "Возврат"]);
 
-  constructor(code: string, capabilities: RuntimeCapabilities) {
+  constructor(code: string, capabilities: RuntimeCapabilities, diag?: DiagnosticsCollector) {
     this.tokens = tokenize(code);
     this.capabilities = capabilities;
+    this.diag = diag;
     this.BUILTIN_MAP = buildBuiltinMap(capabilities);
     // Строим lower-копию для быстрого регистронезависимого поиска builtin
     for (const key of Object.keys(this.BUILTIN_MAP)) {
@@ -247,6 +251,19 @@ class Compiler {
   }
 
   // ====================================================================
+  //  Диагностика (compile-time)
+  // ====================================================================
+
+  /**
+   * Регистрирует compile-time ошибку в DiagnosticsCollector (если есть)
+   * и продолжает — не заменяет throw, т.к. компилятор не может
+   * осмысленно продолжать после ошибки.
+   */
+  private diagError(code: string, message: string, line?: number): void {
+    this.diag?.error(code, message, line);
+  }
+
+  // ====================================================================
   //  Helpers — работа с потоком токенов
   // ====================================================================
 
@@ -263,8 +280,12 @@ class Compiler {
   /** Ожидать токен определённого типа и (опционально) значения */
   private expect(type: string, value?: string): Token {
     const t = this.peek();
-    if (t.type === "EOF") throw new Error(`Неожиданный конец кода`);
+    if (t.type === "EOF") {
+      this.diagError("SYNTAX_ERROR", `Неожиданный конец кода`);
+      throw new Error(`Неожиданный конец кода`);
+    }
     if (t.type !== type || (value !== undefined && t.value !== value)) {
+      this.diagError("SYNTAX_ERROR", `Ожидался "${value || type}", получен "${t.value}"`, t.line);
       throw new Error(`Ожидался "${value || type}", получен "${t.value}" на строке ${t.line}`);
     }
     return this.consume();
@@ -287,6 +308,7 @@ class Compiler {
     // builtin (известную систему) от неизвестного имени
     const isBuiltin = Object.keys(ALL_BUILTINS).some((k) => k.toLowerCase() === lower);
     if (isBuiltin && !this.allowedFunctions.has(lower)) {
+      this.diagError("FUNCTION_UNAVAILABLE", `Функция "${name}" недоступна для target=${this.capabilities.name}`, line);
       throw new Error(`Функция "${name}" недоступна для target=${this.capabilities.name} (строка ${line})`);
     }
   }
@@ -310,12 +332,14 @@ class Compiler {
     const argInfo = this.functionArgInfo.get(name.toLowerCase());
     if (argInfo) {
       if (args.length > argInfo.total) {
+        this.diagError("ARGUMENT_COUNT", `Функция "${name}" ожидает ${argInfo.total} аргументов, передано ${args.length}`, line);
         throw new Error(
           `Функция "${name}" ожидает ${argInfo.total} ` +
           `аргументов, передано ${args.length} (строка ${line})`
         );
       }
       if (args.length < argInfo.mandatory) {
+        this.diagError("ARGUMENT_COUNT", `Функция "${name}" ожидает не менее ${argInfo.mandatory} аргументов, передано ${args.length}`, line);
         throw new Error(
           `Функция "${name}" ожидает не менее ${argInfo.mandatory} ` +
           `аргументов, передано ${args.length} (строка ${line})`
@@ -567,8 +591,10 @@ class Compiler {
         }
       }
       else if (ALL_CONSTRUCTORS[lowerName]) {
+        this.diagError("CONSTRUCTOR_UNAVAILABLE", `Конструктор "${className}" недоступен для target=${this.capabilities.name}`, t.line);
         throw new Error(`Конструктор "${className}" недоступен для target=${this.capabilities.name} (строка ${t.line})`);
       } else {
+        this.diagError("UNKNOWN_CONSTRUCTOR", `Неизвестный класс "${className}"`, t.line);
         throw new Error(`Неизвестный класс "${className}" на строке ${t.line}`);
       }
     }
@@ -595,6 +621,7 @@ class Compiler {
               expr = `context.__functions__.get(${JSON.stringify(name)})(${args.join(", ")})`;
             } else {
               this.validateFunctionCall(name, t.line);
+              this.diagError("UNKNOWN_FUNCTION", `Функция "${name}" не определена`, t.line);
               throw new Error(`Функция "${name}" не определена на строке ${t.line}`);
             }
           } else {
@@ -609,6 +636,7 @@ class Compiler {
         }
       }
     } else {
+      this.diagError("SYNTAX_ERROR", `Неожиданный токен "${t.value}"`, t.line);
       throw new Error(`Неожиданный токен "${t.value}" на строке ${t.line}`);
     }
 
@@ -1021,6 +1049,7 @@ class Compiler {
         if (this.peek().type === "OPERATOR" && this.peek().value === "(") {
           if (!this.isFunction(name)) {
             this.validateFunctionCall(name, t.line);
+            this.diagError("UNKNOWN_FUNCTION", `Функция "${name}" не определена`, t.line);
             throw new Error(`Функция "${name}" не определена на строке ${t.line}`);
           }
           this.emit(`${this.generateFunctionCall(name, t.line)};`, t.line);
@@ -1100,6 +1129,7 @@ class Compiler {
       // ================================================================
       //  Неизвестный токен — ошибка компиляции
       // ================================================================
+      this.diagError("SYNTAX_ERROR", `Неожиданный токен "${t.value}"`, t.line);
       throw new Error(`Неожиданный токен "${t.value}" на строке ${t.line}`);
     }
   }
@@ -1150,6 +1180,7 @@ class Compiler {
     this.mode = "expression";
     const jsCode = this.parseExpression(0);
     if (this.peek().type !== "EOF") {
+      this.diagError("EXPRESSION_ONLY", "Вычислить() принимает только выражение");
       throw new Error("Вычислить() принимает только выражение");
     }
     return { jsCode: `return (${jsCode});` };
@@ -1167,6 +1198,7 @@ class Compiler {
     // Проверяем, что нет запрещённых объявлений
     for (const tok of this.tokens) {
       if (tok.type === "KEYWORD" && Compiler.FORBIDDEN_IN_FRAGMENT.has(tok.value)) {
+        this.diagError("FRAGMENT_FORBIDDEN", `Внутри Выполнить() нельзя использовать "${tok.value}"`, tok.line);
         throw new Error(`Внутри Выполнить() нельзя использовать "${tok.value}" (строка ${tok.line})`);
       }
     }
@@ -1179,12 +1211,16 @@ class Compiler {
 //  Public API — three entry points
 // ======================================================================
 
+export type CompileOptions = {
+  diagnostics?: DiagnosticsCollector;
+};
+
 /**
  * Компилирует программу.
  * Вызывается из ServerRuntime.execute().
  */
-export function compile(code: string, capabilities: RuntimeCapabilities): { jsCode: string; lineMap: number[] } {
-  const compiler = new Compiler(code, capabilities);
+export function compile(code: string, capabilities: RuntimeCapabilities, options?: CompileOptions): { jsCode: string; lineMap: number[] } {
+  const compiler = new Compiler(code, capabilities, options?.diagnostics);
   return compiler.compileProgram();
 }
 
@@ -1192,8 +1228,8 @@ export function compile(code: string, capabilities: RuntimeCapabilities): { jsCo
  * Компилирует выражение.
  * Вызывается из ServerRuntime.createEvalFn() для Вычислить().
  */
-export function compileExpression(code: string, capabilities: RuntimeCapabilities): { jsCode: string } {
-  const compiler = new Compiler(String(code), capabilities);
+export function compileExpression(code: string, capabilities: RuntimeCapabilities, options?: CompileOptions): { jsCode: string } {
+  const compiler = new Compiler(String(code), capabilities, options?.diagnostics);
   return compiler.compileExpr();
 }
 
@@ -1201,7 +1237,7 @@ export function compileExpression(code: string, capabilities: RuntimeCapabilitie
  * Компилирует фрагмент (для Выполнить).
  * Вызывается из ServerRuntime.createExecFn().
  */
-export function compileFragment(code: string, capabilities: RuntimeCapabilities): { jsCode: string } {
-  const compiler = new Compiler(String(code), capabilities);
+export function compileFragment(code: string, capabilities: RuntimeCapabilities, options?: CompileOptions): { jsCode: string } {
+  const compiler = new Compiler(String(code), capabilities, options?.diagnostics);
   return compiler.compileFragment();
 }
