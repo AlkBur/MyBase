@@ -1,0 +1,271 @@
+{
+  "schemaVersion": 1,
+  "generatedAt": "2026-05-29T12:41:56.751Z",
+  "bunVersion": "1.3.14",
+  "runtimeVersion": "1.3.3",
+  "platform": {
+    "os": "win32",
+    "arch": "x64",
+    "cpu": "Intel(R) Core(TM) i7-8565U CPU @ 1.80GHz"
+  },
+  "benchmarks": {
+    "member-access.structure-dot": {
+      "name": "member-access.structure-dot",
+      "baselineKey": "member-access.structure-dot",
+      "category": "dispatch",
+      "opsPerSec": 633892,
+      "medianNs": 1557,
+      "minNs": 1437,
+      "maxNs": 1863,
+      "samples": 30,
+      "runtimeVersion": "1.3.3",
+      "bunVersion": "1.3.14"
+    },
+    "member-access.structure-bracket": {
+      "name": "member-access.structure-bracket",
+      "baselineKey": "member-access.structure-bracket",
+      "category": "dispatch",
+      "opsPerSec": 362555,
+      "medianNs": 2215,
+      "minNs": 1831,
+      "maxNs": 7146,
+      "samples": 30,
+      "runtimeVersion": "1.3.3",
+      "bunVersion": "1.3.14"
+    },
+    "member-access.mixed-hot": {
+      "name": "member-access.mixed-hot",
+      "baselineKey": "member-access.mixed-hot",
+      "category": "dispatch",
+      "opsPerSec": 587084,
+      "medianNs": 1600,
+      "minNs": 1500,
+      "maxNs": 2400,
+      "samples": 30,
+      "runtimeVersion": "1.3.3",
+      "bunVersion": "1.3.14"
+    },
+    "row-access.warm": {
+      "name": "row-access.warm",
+      "baselineKey": "row-access.warm",
+      "category": "dispatch",
+      "opsPerSec": 467508,
+      "medianNs": 2070,
+      "minNs": 1960,
+      "maxNs": 3220,
+      "samples": 30,
+      "runtimeVersion": "1.3.3",
+      "bunVersion": "1.3.14"
+    },
+    "find-rows.linear-100": {
+      "name": "find-rows.linear-100",
+      "baselineKey": "find-rows.linear-100",
+      "category": "collection",
+      "opsPerSec": 71480,
+      "medianNs": 13500,
+      "minNs": 13000,
+      "maxNs": 21900,
+      "samples": 30,
+      "runtimeVersion": "1.3.3",
+      "bunVersion": "1.3.14",
+      "params": {
+        "rows": 100
+      }
+    },
+    "table-iteration.10": {
+      "name": "table-iteration.10",
+      "baselineKey": "table-iteration.10",
+      "category": "iteration",
+      "opsPerSec": 78349,
+      "medianNs": 12300,
+      "minNs": 12000,
+      "maxNs": 20400,
+      "samples": 30,
+      "runtimeVersion": "1.3.3",
+      "bunVersion": "1.3.14",
+      "params": {
+        "rows": 10
+      }
+    },
+    "table-iteration.100": {
+      "name": "table-iteration.100",
+      "baselineKey": "table-iteration.100",
+      "category": "iteration",
+      "opsPerSec": 9901,
+      "medianNs": 98400,
+      "minNs": 95800,
+      "maxNs": 107400,
+      "samples": 30,
+      "runtimeVersion": "1.3.3",
+      "bunVersion": "1.3.14",
+      "params": {
+        "rows": 100
+      }
+    },
+    "table-iteration.1000": {
+      "name": "table-iteration.1000",
+      "baselineKey": "table-iteration.1000",
+      "category": "iteration",
+      "opsPerSec": 1102,
+      "medianNs": 869500,
+      "minNs": 863600,
+      "maxNs": 1811500,
+      "samples": 30,
+      "runtimeVersion": "1.3.3",
+      "bunVersion": "1.3.14",
+      "params": {
+        "rows": 1000
+      }
+    },
+    "array-append.10": {
+      "name": "array-append.10",
+      "baselineKey": "array-append.10",
+      "category": "collection",
+      "opsPerSec": 109729,
+      "medianNs": 8800,
+      "minNs": 8200,
+      "maxNs": 12400,
+      "samples": 30,
+      "runtimeVersion": "1.3.3",
+      "bunVersion": "1.3.14",
+      "params": {
+        "count": 10
+      }
+    },
+    "array-append.100": {
+      "name": "array-append.100",
+      "baselineKey": "array-append.100",
+      "category": "collection",
+      "opsPerSec": 31606,
+      "medianNs": 30600,
+      "minNs": 29300,
+      "maxNs": 52200,
+      "samples": 30,
+      "runtimeVersion": "1.3.3",
+      "bunVersion": "1.3.14",
+      "params": {
+        "count": 100
+      }
+    },
+    "structure-lookup.existing": {
+      "name": "structure-lookup.existing",
+      "baselineKey": "structure-lookup.existing",
+      "category": "lookup",
+      "opsPerSec": 532404,
+      "medianNs": 1800,
+      "minNs": 1719,
+      "maxNs": 2959,
+      "samples": 30,
+      "runtimeVersion": "1.3.3",
+      "bunVersion": "1.3.14"
+    },
+    "structure-lookup.missing": {
+      "name": "structure-lookup.missing",
+      "baselineKey": "structure-lookup.missing",
+      "category": "lookup",
+      "opsPerSec": 933908,
+      "medianNs": 1046,
+      "minNs": 923,
+      "maxNs": 1762,
+      "samples": 30,
+      "runtimeVersion": "1.3.3",
+      "bunVersion": "1.3.14"
+    },
+    "structure-lookup.many-keys": {
+      "name": "structure-lookup.many-keys",
+      "baselineKey": "structure-lookup.many-keys",
+      "category": "lookup",
+      "opsPerSec": 582605,
+      "medianNs": 1643,
+      "minNs": 1579,
+      "maxNs": 2314,
+      "samples": 30,
+      "runtimeVersion": "1.3.3",
+      "bunVersion": "1.3.14"
+    },
+    "compilation.parse-lower": {
+      "name": "compilation.parse-lower",
+      "baselineKey": "compilation.parse-lower",
+      "category": "compilation",
+      "opsPerSec": 3883,
+      "medianNs": 244600,
+      "minNs": 209400,
+      "maxNs": 524700,
+      "samples": 30,
+      "runtimeVersion": "1.3.3",
+      "bunVersion": "1.3.14"
+    },
+    "compilation.sandbox-build": {
+      "name": "compilation.sandbox-build",
+      "baselineKey": "compilation.sandbox-build",
+      "category": "compilation",
+      "opsPerSec": 167973,
+      "medianNs": 5600,
+      "minNs": 2400,
+      "maxNs": 13300,
+      "samples": 30,
+      "runtimeVersion": "1.3.3",
+      "bunVersion": "1.3.14"
+    },
+    "compilation.runtime-cache-hit": {
+      "name": "compilation.runtime-cache-hit",
+      "baselineKey": "compilation.runtime-cache-hit",
+      "category": "compilation",
+      "opsPerSec": 3448276,
+      "medianNs": 200,
+      "minNs": 100,
+      "maxNs": 3300,
+      "samples": 30,
+      "runtimeVersion": "1.3.3",
+      "bunVersion": "1.3.14"
+    },
+    "native.structure-dot-dsl": {
+      "name": "native.structure-dot-dsl",
+      "baselineKey": "native.structure-dot-dsl",
+      "category": "dispatch",
+      "opsPerSec": 591230,
+      "medianNs": 1667,
+      "minNs": 1592,
+      "maxNs": 2450,
+      "samples": 30,
+      "runtimeVersion": "1.3.3",
+      "bunVersion": "1.3.14"
+    },
+    "native.structure-dot-js": {
+      "name": "native.structure-dot-js",
+      "baselineKey": "native.structure-dot-js",
+      "category": "dispatch",
+      "opsPerSec": 44859813,
+      "medianNs": 19,
+      "minNs": 19,
+      "maxNs": 41,
+      "samples": 30,
+      "runtimeVersion": "1.3.3",
+      "bunVersion": "1.3.14"
+    },
+    "native.array-bracket-dsl": {
+      "name": "native.array-bracket-dsl",
+      "baselineKey": "native.array-bracket-dsl",
+      "category": "dispatch",
+      "opsPerSec": 624010,
+      "medianNs": 1538,
+      "minNs": 1405,
+      "maxNs": 2595,
+      "samples": 30,
+      "runtimeVersion": "1.3.3",
+      "bunVersion": "1.3.14"
+    },
+    "native.array-bracket-js": {
+      "name": "native.array-bracket-js",
+      "baselineKey": "native.array-bracket-js",
+      "category": "dispatch",
+      "opsPerSec": 1428571,
+      "medianNs": 542,
+      "minNs": 523,
+      "maxNs": 1442,
+      "samples": 30,
+      "runtimeVersion": "1.3.3",
+      "bunVersion": "1.3.14"
+    }
+  }
+}

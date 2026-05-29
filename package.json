@@ -10,7 +10,11 @@
     "reset": "bun run clean && bun run start",
     "debug": "D:\\PROJECTS\\bun\\bin\\bun-windows-x64\\bun.exe --inspect run index.ts",
     "test": "tests/runner.ts",
-    "test-update": "tests/runner.ts --update"
+    "test-update": "tests/runner.ts --update",
+    "perf": "tests/perf/perf.ts",
+    "perf:compare": "tests/perf/perf.ts --compare-baseline",
+    "perf:tag": "tests/perf/perf.ts --tag",
+    "perf:save": "tests/perf/perf.ts --history-save"
     },
     "private": true,
     "devDependencies": {
