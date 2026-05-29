@@ -332,6 +332,8 @@ interface RuntimeCapabilities {
 19. **ABI assertion test must pass before member dispatch migration.** `expect(BUILTIN_KEYS.sort()).toEqual(Object.keys(ABI_CONSTANTS.builtinValues).sort())` — ABI drift обнаружен на этапе CI.
 20. **Builtins extraction was mechanical (zero semantic edits).** contract.ts extracted from builtins.ts with `git diff --word-diff` verification. После extraction builtins.ts — тонкая фасада; objects/ не импортируют из builtins.ts.
 
+21. **Compiler has two independent dot-chain lowering pipelines.** `parsePrimary` / `parseMethodChain` handles expression-context chains (`a = Obj.Prop`), while `parseStatement` inline chain (line 1071) handles statement-context chains (`Obj.Prop.Method()`). До B1.2 оба генерировали native JS `.prop`; B1.2 переключил оба на `__dsl_member_get__`. Write-paths (`Obj.Prop = v`, `Obj["Prop"] = v`) остаются на `__dsl_index_set__` до B.3, bracket-read на `__dsl_index__` до B.1.6. Это documented topology split, not bug. B.3 write dispatch and debugger hooks потребуют unified IR.
+
 ### Contract extraction pattern — `contract.ts`
 
 `runtime/shared/contract.ts` содержит **группированные объекты**, не плоские экспорты:
@@ -605,9 +607,13 @@ bun run test-update    # перезаписать expected из actual
 - [x] A.5: `DiagnosticsCollector` — compile-time only, all throw-sites instrumented
 - [x] A.6: `DEBT(v1.5)` / `TRANSITION(v1.4)` markers across codebase
 
-**Phase B — Member dispatch (3 stages)**
+**Phase B — Member dispatch**
 - [x] B.0: Golden compile snapshots + ABI assertion test
-- [ ] B.1: `__dsl_member_get__` — read-only dispatch, compile.ts dot/bracket → member_get
+- [x] **B.1 — `__dsl_member_get__` builtin + read-side lowering** (B1.1 builtin+B1.2 compile.ts)
+- [ ] B.1.3: Structure dispatch — register Structure handler in member-dispatch registry
+- [ ] B.1.4: ValueTableRow dispatch — row dispatch with debug counters
+- [ ] B.1.5: Polymorphic unifying dispatch — registry-based polymorphic dispatch
+- [ ] B.1.6: Remove transitional read fallbacks — stabilization after all read handlers registered
 - [ ] B.2: Stabilization — remove transitional fallbacks (native-property sync, НайтиСтроки, Свернуть)
 - [ ] B.3: `__dsl_member_set__` — write dispatch, compile.ts assignment → member_set
 - [ ] B.4: Remove `__dsl_index__` / `__dsl_index_set__` (replaced by member_get/member_set)

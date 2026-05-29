@@ -6,20 +6,21 @@
 //  Запускается отдельно от compile-runner (snapshot diff).
 //
 //  Инварианты:
-//    1. B.0 base — в assignment-dot нет __dsl_member_get__/__dsl_member_set__
-//    2. B.0 base — bracket read идёт через __dsl_index__
-//    3. B.0 base — dot read это plain JS property access
-//    4. B.0 base — bracket/dot assignment идёт через __dsl_index_set__
+//    1. Dot read (expression-context): a = Obj.Prop → __dsl_member_get__
+//    2. Statement-call (statement-context): Obj.Prop.Method() → member_get + .Method
+//    3. Write-path legacy: Obj.Prop = v → __dsl_index_set__ (до B.3)
+//    4. Bracket read: Obj["Prop"] → __dsl_index__ (до B.1.6)
 //    5. eval не содержит __dsl_db__ / __dsl_Query__ / __dsl_index_set__
-//    6. fragment mode (Выполнить) — нет Возврат/Процедура/Функция/Перем
+//    6. Dot vs bracket assignment lowering идентичны (оба → __dsl_index_set__)
 //    7. Цикл Для — правильная структура (while с .get/.set)
 //    8. Цикл Для Каждого — for-of + scope cleanup
-//    9. Чейнинг: index → dot → index (nested-access)
-//    10. assertion-ordered: assignment-dot и assignment-bracket
-//    11. НайтиСтроки с Структура-аргументом
+//    9. НайтиСтроки с Структура-аргументом
+//   10. Чейнинг: Т[0].Данные["К1"] → member_get + __dsl_index__
+//   11. Для: ordered lowering
 //
 //  Global invariant:
-//    Ни в одном baseline-файле нет __dsl_member_get__ или __dsl_member_set__
+//    Ни в одном baseline-файле нет __dsl_member_set__ (B.3 не начат)
+//    __dsl_member_get__ ОЖИДАЕТСЯ в dot-access snapshot-ах (B.1.2+)
 // ======================================================================
 
 import { compile } from "../../compiler/compile";
@@ -109,11 +110,11 @@ function assertCompilesOrdered(source: string, parts: string[]): void {
 }
 
 // ======================================================================
-//  Baseline snapshots — проверка, что ни один baseline
-//  не содержит member_get/member_set (B.1 не начат)
+//  GLOBAL invariant — member_set НИГДЕ не появляется до B.3
+//  member_get ОЖИДАЕТСЯ в dot-access snapshot-ах (B.1.2+)
 // ======================================================================
 
-runTest("GLOBAL: no member_get/member_set in any baseline", () => {
+runTest("GLOBAL: no member_set in any baseline (B.3 not started)", () => {
   const expectedDir = join(import.meta.dir, "expected");
   const files = readdirSync(expectedDir).filter((f) => f.endsWith(".expected.json"));
 
@@ -129,10 +130,6 @@ runTest("GLOBAL: no member_get/member_set in any baseline", () => {
       throw new Error(`bad snapshot ${file}: missing .js`);
     }
 
-    if (snapshot.js.includes("__dsl_member_get__")) {
-      throw new Error(`${file} contains __dsl_member_get__ — B.1 started unexpectedly`);
-    }
-
     if (snapshot.js.includes("__dsl_member_set__")) {
       throw new Error(`${file} contains __dsl_member_set__ — B.3 started unexpectedly`);
     }
@@ -140,22 +137,47 @@ runTest("GLOBAL: no member_get/member_set in any baseline", () => {
 });
 
 // ======================================================================
-//  Invariant 1: dot read → plain JS property
+//  Invariant 1: dot read (expression context) → __dsl_member_get__
 // ======================================================================
 
-runTest("Структура.К1 → plain dot (not __dsl_index__)", () => {
+runTest("a = Структура.К1 → __dsl_member_get__ (not __dsl_index__)", () => {
   assertCompilesTo(
     'Структура = Новый Структура("К1", 1); a = Структура.К1;',
-    [').К1'],
-    ['__dsl_index__', '__dsl_member_get__']
+    ['__dsl_member_get__('],
+    ['__dsl_index__(']
   );
 });
 
-runTest("Стр.К1 → plain dot (not __dsl_index__)", () => {
+runTest("a = Стр.К1 → __dsl_member_get__ (not __dsl_index__)", () => {
   assertCompilesTo(
     'Т = Новый ТаблицаЗначений; Т.Колонки.Добавить("К1"); Стр = Т.Добавить(); a = Стр.К1;',
-    [').К1'],
-    ['__dsl_index__', '__dsl_member_get__']
+    ['__dsl_member_get__('],
+    ['__dsl_index__(']
+  );
+});
+
+// ======================================================================
+//  Invariant 1b: statement-call chain — split-brain topology test
+//  Obj.Prop.Method() → member_get for Prop, .Method() stays native
+//  (Критично: B1.2 обнаружил, что statement-chain и expression-chain
+//   были независимыми pipeline. Этот тест — canary.)
+// ======================================================================
+
+runTest("Т.Колонки.Добавить() → member_get + .Добавить (statement chain)", () => {
+  assertCompilesTo(
+    'Т = Новый ТаблицаЗначений; Т.Колонки.Добавить("К1");',
+    ['__dsl_member_get__(', '.Добавить('],
+    []
+  );
+});
+
+runTest("Структура.К1 = v → __dsl_index_set__ (write path legacy)", () => {
+  // Write-path assignment НЕ идёт через member_get, а использует
+  // __dsl_index_set__ + objExpr (from statement-chain decomposition)
+  assertCompilesTo(
+    'Структура = Новый Структура("К1", 1); Структура.К1 = 42;',
+    ['__dsl_index_set__('],
+    ['__dsl_member_set__(']
   );
 });
 
@@ -163,20 +185,20 @@ runTest("Стр.К1 → plain dot (not __dsl_index__)", () => {
 //  Invariant 2: bracket read → __dsl_index__
 // ======================================================================
 
+// ======================================================================
+//  Invariant 2: bracket read → __dsl_index__
+// ======================================================================
+
+//  Не используем not_contains для member_get — setup chains (Т.Колонки.Добавить)
+//  теперь используют member_get. Проверяем только bracket path.
 runTest('Структура["К1"] → __dsl_index__', () => {
-  assertCompilesTo(
-    'Структура = Новый Структура("К1", 1); b = Структура["К1"];',
-    ['__dsl_index__('],
-    ['__dsl_member_get__']
-  );
+  const js = compileCode('Структура = Новый Структура("К1", 1); b = Структура["К1"];');
+  assert(js.includes('__dsl_index__('), `expected __dsl_index__ for bracket access\nJS:\n${js}`);
 });
 
-runTest('Стр["К1"] → __dsl_index__', () => {
-  assertCompilesTo(
-    'Т = Новый ТаблицаЗначений; Т.Колонки.Добавить("К1"); Стр = Т.Добавить(); b = Стр["К1"];',
-    ['__dsl_index__('],
-    ['__dsl_member_get__']
-  );
+runTest('Стр[0] → __dsl_index__', () => {
+  const js = compileCode('Стр = Новый Массив; b = Стр[0];');
+  assert(js.includes('__dsl_index__('), `expected __dsl_index__ for bracket access\nJS:\n${js}`);
 });
 
 // ======================================================================
@@ -245,7 +267,7 @@ runTest("Для → while (.get/.set)", () => {
   assertCompilesTo(
     'Для i = 1 по 10 Цикл a = a + i; КонецЦикла;',
     ['.get(', '.set('],
-    ['__dsl_member_get__']
+    []
   );
 });
 
@@ -262,18 +284,24 @@ runTest("Для Каждого → for-of", () => {
 //  Invariant 8: nested chain — index → dot → index
 // ======================================================================
 
-runTest("nested: Т[0].Данные[\"К1\"] → дважды __dsl_index__ + .Данные", () => {
+runTest("nested: Т[0].Данные[\"К1\"] → member_get вместо .Данные", () => {
   // Nested expression => JS nesting, ordered check не применим (см. design).
-  // Вместо этого: count __dsl_index__ и проверяем наличие .Данные
+  // Т[0].Данные → __dsl_member_get__(__dsl_index__(Т, 0), "Данные")
+  // ["К1"] → __dsl_index__(member_get(...), "К1")
+  // Итого: 1 __dsl_member_get__ + 2 __dsl_index__
   const js = compileCode(`
     Т = Новый ТаблицаЗначений;
     Т.Колонки.Добавить("К1");
     Стр = Т.Добавить();
     a = Т[0].Данные["К1"];
   `);
+  // member_get: один для .Данные (выражение), плюс setup line Т.Колонки
+  // Итого ≥2 member_get (Т.Колонки + .Данные)
+  const mgCount = (js.match(/__dsl_member_get__/g) || []).length;
+  assert(mgCount >= 2, `expected ≥2 __dsl_member_get__, got ${mgCount}`);
+  // __dsl_index__: Т[0] + ["К1"] + возможно setup
   const idxCount = (js.match(/__dsl_index__/g) || []).length;
   assert(idxCount >= 2, `expected ≥2 __dsl_index__, got ${idxCount}`);
-  assert(js.includes(".Данные"), "expected .Данные");
 });
 
 // ======================================================================

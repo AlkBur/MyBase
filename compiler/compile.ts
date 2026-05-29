@@ -1072,6 +1072,7 @@ class Compiler {
           let expr = this.emitRead(target);
           // Для __dsl_index_set__ на dot-access: отслеживаем последнее свойство
           let lastProp: string | null = null;
+          let objExpr: string = expr; // receiver for assignment decomposition (read-prefix before last prop)
           while (this.peek().type === "OPERATOR" && this.peek().value === ".") {
             this.consume();
             const prop = this.expect("IDENTIFIER").value;
@@ -1081,7 +1082,10 @@ class Compiler {
               expr = `${expr}.${prop}(${args.join(", ")})`;
               lastProp = null; // method call — не property
             } else {
-              expr = `${expr}.${prop}`;
+              // B.1.2: read-side dot-access → member_get (not native JS property)
+              // Сохраняем objExpr для assignment decomposition (lastIndexOf(".") не работает с member_get)
+              objExpr = expr;
+              expr = `__dsl_member_get__(${expr}, ${JSON.stringify(prop)})`;
               lastProp = prop;
             }
           }
@@ -1106,9 +1110,8 @@ class Compiler {
             } else if (lastProp !== null) {
               // TRANSITION(v1.4): replace with __dsl_member_set__ after member_set migration
               // Dot-access присваивание: obj.prop = val → __dsl_index_set__(obj, "prop", val)
-              // Нужно отделить объект от последнего свойства
-              const lastDot = expr.lastIndexOf(".");
-              const objExpr = expr.substring(0, lastDot);
+              // Используем objExpr (receiver перед lastProp), а не lastIndexOf(".")
+              // (member_get не содержит ".", lastIndexOf сломался бы)
               expr = `__dsl_index_set__(${objExpr}, ${JSON.stringify(lastProp)}, ${value})`;
             } else {
               expr = `${expr} = ${value}`;
