@@ -324,15 +324,53 @@ new Function("context", "__dsl_db__", "__dsl_Query__",
 
 ---
 
-## 10. String semantics
+## 10. Diagnostics infrastructure (v1.4)
 
-### 10.1 Escaped quotes
+### 10.1 Compile-time diagnostics
+
+`DiagnosticsCollector` — compile-time only, explicit parameter, not global:
+
+```ts
+class DiagnosticsCollector {
+  error(code: string, message: string, line?: number): void;
+  warning(code: string, message: string, line?: number): void;
+  info(code: string, message: string, line?: number): void;
+  hasErrors(): boolean;
+  toArray(): Diagnostic[];
+}
+```
+
+- Все 13 throw-сайтов compile.ts инструментированы через `diagError(code, msg, line)`
+- После `diagError()` — throw, прерывающий компиляцию (same behaviour as before)
+- `ExecutionResult.diagnostics` опционально содержит массив `Diagnostic[]`
+- Snapshot writer НЕ включает `diagnostics` — transparent to golden tests
+- Runtime-ошибки не создают Diagnostic (deferred to v2.0)
+
+### 10.2 Diagnostic codes
+
+| Code | Условие |
+|------|---------|
+| `SYNTAX_ERROR` | Неожиданный токен, отсутствие `;` |
+| `UNKNOWN_FUNCTION` | Вызов несуществующей builtin |
+| `FUNCTION_UNAVAILABLE` | Функция недоступна для target |
+| `UNKNOWN_CONSTRUCTOR` | Неизвестный конструктор |
+| `CONSTRUCTOR_UNAVAILABLE` | Конструктор недоступен для target |
+| `ARG_COUNT_ERROR` | Неверное число аргументов |
+| `FORBIDDEN_IN_FRAGMENT` | Процедура/Функция/Возврат/Перем в fragment mode |
+| `ASSIGN_IN_EXPRESSION` | Присваивание в expression mode |
+| `RETURN_IN_FRAGMENT` | Возврат в fragment mode |
+
+---
+
+## 11. String semantics (v1.3)
+
+### 11.1 Escaped quotes
 
 - 1C-стиль: `""` внутри строки → один символ `"`.
 - Нет JS-стиля `\"`.
 - Обрабатывается в токенизаторе.
 
-### 10.2 Multiline strings
+### 11.2 Multiline strings
 
 - Новая строка внутри литерала → `\n` сохраняется в значении буквально.
 - Опциональный continuation marker `|` сразу после `\n` удаляется.

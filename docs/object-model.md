@@ -50,26 +50,56 @@ Current model:
 
 ### `[]` is dispatch-based, not native JS indexing
 
-`__dsl_index__` and `__dsl_index_set__` route through a centralized dispatch function
-that checks `__dsl_type__` and delegates to the appropriate storage layer.
-This is the foundation for future:
-- prototype-chain hardening
-- computed property interception
-- readonly collection guards
+`__dsl_index__` (read) and `__dsl_index_set__` (write) route through a centralized dispatch
+function that checks `__dsl_type__` and delegates to the appropriate storage layer.
+This provides:
+- per-type read/write semantics (readonly guards for FixedMap, Indexes)
+- bounds checking for columns, rows, indexes
+- case-insensitive member access on DSL objects
+- foundation for member dispatch migration (v1.4 Phase B)
 
-## Future hardening
+### Transitional bridge: native property sync
 
-### `__dsl_member_get__` / `__dsl_member_set__`
+Currently, `__dsl_index_set__` for `DSLValueTableRow` writes to both `__values__[lower]`
+and `row[originalKey]` (native property). This is `TRANSITION(v1.4)` — a bridge for
+dot-access consistency, to be removed in v1.4 Phase B.2 after member_set migration.
 
-Will replace current mixed model with unified member access:
-- dot-access goes through same dispatch as bracket-access
-- case-insensitive semantics guaranteed for all access patterns
-- prototype-chain traversal restricted to own-properties only
+## v1.4 Member dispatch migration
 
-### Prototype-chain hardening
+### Phase B.1 — Read-only (`__dsl_member_get__`)
 
-Currently: `obj[key]` fallback allows prototype-chain traversal.
-Future: restricted to own-properties via `Object.hasOwn()`.
+Introduce unified read dispatch:
+- compile.ts dot-access (`obj.prop`) → `__dsl_member_get__`
+- compile.ts bracket-access (`obj["prop"]`) → `__dsl_member_get__`
+- Same dispatch for all DSL object types (Row, Table, Structure, Map, etc.)
+- Transitional native-property fallback preserved (removed in B.2)
+
+### Phase B.2 — Stabilization
+
+- Remove native-property fallback in `__dsl_index__` (ValueTableRow)
+- Remove native-property sync in `__dsl_index_set__` (ValueTableRow)
+- Remove native-property fallback in `НайтиСтроки`
+- Remove native-property sync in `Свернуть`
+- Verify all golden tests pass with member_get-only dispatch
+
+### Phase B.3 — Write dispatch (`__dsl_member_set__`)
+
+- compile.ts assignment → `__dsl_member_set__` (instead of `__dsl_index_set__`)
+- Replace `__dsl_index_set__` calls with `__dsl_member_set__`
+- Remove `__dsl_index__` / `__dsl_index_set__` builtins entirely
+
+### Phase C — Hardening
+
+- Symbol migration: `__dsl_type__` → `Symbol("dsl:type")`, `__values__` → `Symbol("dsl:values")`
+- Formalize member dispatch in RFC-0001
+- `__dsl_member_get__` restricts to own-properties via `Object.hasOwn()`
+
+## Future hardening (v1.5+)
+
+### Comparison engine
+
+`__dsl_compare__` replaces native `===`, `>`, `<`, `>=`, `<=` for DSL semantics
+(type-sensitive comparison, BSL collation).
 
 ### Serialization
 

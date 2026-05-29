@@ -47,13 +47,16 @@ bun run clean         # удалить data.db и app.exe
 /compiler
   tokenize.ts         ← токенизатор (в т.ч. ВызватьИсключение, Попытка, multline strings, DATE 'YYYYMMDD', decimal числа 3.14)
   ast.ts              ← AST Node types (декларативно)
-  compile.ts          ← Program + Expression compiler (Compiler class)
+  compile.ts          ← Program + Expression + Fragment compiler (принимает опциональный DiagnosticsCollector)
 
 /runtime
   /shared
     types.ts          ← ExecuteRequest, ExecutionResult, DSRuntime, OutputEvent, Diagnostic
     errors.ts         ← DSRuntimeError (branded symbol, readonly line)
-    builtins.ts       ← фабрики builtin-функций (capture output[], делегирует в objects/)
+    builtins.ts       ← фабрики builtin-функций (сейчас тонкая фасада над contract.ts + objects/)
+    contract.ts       ← v1.4 — DisplayContract, TypeContract, CoercionContract (механически выделен из builtins.ts)
+    abi.ts            ← v1.4 — DSLRuntimeABI_v1_3_3 (types-only interface + ABI_CONSTANTS frozen snapshot)
+    diagnostics.ts    ← v1.4 — DiagnosticsCollector (compile-time only, code: string)
     execute.ts        ← execute() — выбор runtime и выполнение
     /objects          ← DSL Object Model Layer (v1.3)
       helpers.ts            ← defineMethod, defineDSLType, type guards (isDSL*)
@@ -75,31 +78,17 @@ bun run clean         # удалить data.db и app.exe
     runtime.ts        ← ClientRuntime — AST interpreter (stub)
 
 /tests
-  /cases              ← .os + .meta.json
-    test-script.os          — демо-скрипт (SQLite, строки, процедуры/функции)
-    error-unknown.os        — вызов несуществующей функции
-    error-args.os           — неверное число аргументов
-    test-case-insensitive.os — case-insensitive переменные
-    test-loops.os           — циклы Для/Пока
-    eval-expression.os      — Вычислить() expression engine
-    test-eval.os            — Вычислить() (user-created дубль)
-    error-throw.os          — ВызватьИсключение (DSRuntimeError)
-    integration-eval.os     — интеграционный тест (Сред + цикл + eval + user-функция)
-    error-client-query.os   — client runtime не даёт Новый Запрос (skipped)
-    eval.os                 — user-created (eval + try/catch + errorInfo, все процедуры активны)
-    test-string-escaped.os      — экранирование "" в строках
-    test-string-empty-quote.os  — пустая экранированная кавычка
-    test-string-multiple.os     — множественные "" в строке
-    test-string-newline.os      — перевод строки внутри литерала (multiline)
-    test-multiline.os           — pipe-синтаксис многострочных строк | 
-     test-collections.os         — Массив (Добавить, Вставить, Удалить, Найти, Очистить), Структура (Вставить, Свойство, Удалить, Свойства)
-     array.os                    — многомерные массивы, bracket access [index], Новый Массив(N), Перем, indexed assignment
-      StrGetLine.os               — СтрПолучитьСтроку (multiline, 1-based индекс, граничные случаи)
-      ValueTableIndex.os          — ТаблицаЗначений: колонки, индексы (stub), НайтиСтроки, итерация, исключения
-      collections.os              — Соответствие (ключи всех типов: undefined, null, boolean, number, string, Date, UUID, Тип)
+  /cases              ← .os + .meta.json (рекурсивно, grouped по категориям)
+    /syntax             — синтаксические тесты (строки, многострочность)
+    /semantics          — семантические тесты (циклы, eval, ошибки)
+    /collections        — коллекции (Массив, Структура, Соответствие, ФиксМассив, ФиксСоответствие)
+    /runtime            — runtime-тесты (ТаблицаЗначений, СтрПолучитьСтроку, демо-скрипт)
+  /expected           ← golden snapshots (.expected.json, flat basename lookup)
+  /invariants         ← TS-side invariant tests (отдельный lane, без golden)
+    member-access.invariant.ts  — 9 инвариантов (dot/bracket, case, deleted column, unknown member)
+  runner.ts           ← multi-runtime golden test runner (рекурсивный **/*.os)
 
-   /expected           ← golden snapshots (.expected.json)
-  runner.ts           ← multi-runtime golden test runner
+/server
 
 /server
   dev-server.ts       ← HTTP API (POST /api/v1/execute) — Фаза 3
@@ -286,10 +275,10 @@ interface RuntimeCapabilities {
 | try/catch transpiles to native JS try/catch | intentional — любой throw ловится, но line есть только у DSRuntimeError |
 | eval/exec recursion hard-limit = 500 | intentional — DSRuntimeError, общий счётчик |
 | Shallow `Object.freeze` на ИнформацияОбОшибке | intentional — для v1 достаточно, не deep freeze |
-| `row["К1"]` (bracket) case-insensitive, `row.К1` (dot) — store через `__values__`, read fallback на native | intentional — transitional member access model, unified dispatch до v1.4 |
+| `row["К1"]` (bracket) case-insensitive, `row.К1` (dot) — store через `__values__`, read fallback на native | intentional — transitional member access model, unified dispatch в v1.4 Phase B |
 | Column rename (`col.Имя = "новое"`) обновляет `defineProperty` + nameIndex + row data + index fields | intentional — rename-каскад через owner-chain, Phase 1 closure |
-| `Индексы` — stub без индексного движка | intentional — real index = mini DB engine, deferred |
-| Bracket write (`row["К1"] = val`) синхронизирует native property | intentional — transitional bridge до `__dsl_member_set__` |
+| `Индексы` — stub без индексного движка | intentional — real index = mini DB engine, deferred до v1.5 |
+| Bracket write (`row["К1"] = val`) синхронизирует native property | intentional — TRANSITION(v1.4), удаляется в B.2 при member_set migration |
 | `Соответствие` — identity-based Map (native JS Map) | intentional — ключи любых типов, без lowercasing/stringification |
 | `Тип("Строка")` возвращает модульный singleton | intentional — reference identity для ключей Map и `===` |
 | `УникальныйИдентификатор` — `crypto.randomUUID()` | intentional — каждый вызов новый UUID, без парсинга строк |
@@ -338,6 +327,96 @@ interface RuntimeCapabilities {
 14. **`+` in expression mode generates `__dsl_add__(...)` for BSL coercion.** Всегда, не только когда операнд строка. Компилятор не знает типов на этапе компиляции.
 15. **Date literals compile to `new Date(y, m-1, d)`, not strings.** Сохраняет type identity для `__dsl_type__` dispatch. Runtime-нормализация в Map приводит Date к YYYYMMDD.
 16. **`Null` is a language literal, not a variable.** Компилятор генерирует `null` для `Null` на уровне parsePrimary, без lookup через context.__variables__.
+17. **DiagnosticsCollector is compile-time only, not runtime.** Собирает structured diagnostics (error/warning/info) с code:string. Все 13 throw-сайтов compile.ts инструментированы. Runtime-ошибки не имеют диагностик (могут появиться в v2.0). Поле `diagnostics` в `ExecutionResult` опционально — прозрачно для golden snapshots.
+18. **DEBT(v1.x) markers document deferred work.** `DEBT(v1.5)` = deferred до v1.5, `TRANSITION(v1.4)` = будет удалено в v1.4. Не TODOs, а documented technical debt. Snapshot-тесты проверяют, что DEBT-код не сломан.
+19. **ABI assertion test must pass before member dispatch migration.** `expect(BUILTIN_KEYS.sort()).toEqual(Object.keys(ABI_CONSTANTS.builtinValues).sort())` — ABI drift обнаружен на этапе CI.
+20. **Builtins extraction was mechanical (zero semantic edits).** contract.ts extracted from builtins.ts with `git diff --word-diff` verification. После extraction builtins.ts — тонкая фасада; objects/ не импортируют из builtins.ts.
+
+### Contract extraction pattern — `contract.ts`
+
+`runtime/shared/contract.ts` содержит **группированные объекты**, не плоские экспорты:
+
+```ts
+export const DisplayContract = {
+  coerceForDisplay(v: unknown): string { ... },
+  formatDslNumber(n: number): string { ... },
+};
+export const TypeContract = {
+  isDSLNumber(v: unknown): boolean { ... },
+  isDSLString(v: unknown): boolean { ... },
+  isDSLBoolean(v: unknown): boolean { ... },
+  isDSLDate(v: unknown): boolean { ... },
+};
+export const CoercionContract = {
+  dslCoerceString(v: unknown): string { ... },
+};
+```
+
+**Rationale:**
+- Named groups (не 40 flat функций) — tree-shaking + mocking
+- Механическое выделение — zero semantic drift
+- builtins.ts импортирует contract.ts, objects/ не импортируют builtins.ts
+
+### ABI snapshot — `abi.ts`
+
+```ts
+export const ABI_VERSION = "v1.3.3";
+
+export interface DSLRuntimeABI_v1_3_3 {
+  builtinKeys: readonly string[];
+  builtinAliases: Record<string, string>;
+  constructorNames: readonly string[];
+  capabilities: {
+    server: { functions: string[]; constructors: string[] };
+    client: { functions: string[]; constructors: string[] };
+  };
+}
+
+export const ABI_CONSTANTS: DSLRuntimeABI_v1_3_3 = { ... };
+```
+
+- Types-only, zero runtime import
+- `ABI_CONSTANTS` — frozen readonly snapshot
+- Machine-readable JSON в `docs/internal/runtime-abi-snapshot-v1.3.3.json`
+- CI assertion: BUILTIN_KEYS === ABI snapshot
+
+### Diagnostics infrastructure — `DiagnosticsCollector`
+
+```ts
+class DiagnosticsCollector {
+  error(code: string, message: string, line?: number): void;
+  warning(code: string, message: string, line?: number): void;
+  info(code: string, message: string, line?: number): void;
+  hasErrors(): boolean;
+  toArray(): Diagnostic[];
+}
+```
+
+- **Compile-time only** — ни один runtime catch не создаёт Diagnostic
+- **Explicit parameter** — компилятор принимает опциональный `CompileOptions { diagnostics }`
+- **Transparent to golden snapshots** — snapshot writer не включает `diagnostics`
+- **Codes:** `SYNTAX_ERROR`, `UNKNOWN_FUNCTION`, `FUNCTION_UNAVAILABLE`, `CONSTRUCTOR_UNAVAILABLE`, `ARG_COUNT_ERROR`, `FORBIDDEN_IN_FRAGMENT`, `UNKNOWN_CONSTRUCTOR`, `ASSIGN_IN_EXPRESSION`, `RETURN_IN_FRAGMENT`, etc.
+
+### Invariant tests — TS-side
+
+`tests/invariants/member-access.invariant.ts`:
+
+- 9 DSL-level invariants, verified через TS (не DSL builtins)
+- Запускаются отдельным lane, не в golden pipeline
+- `runInvariant(name, fn)` helper — минимальный раннер
+- **Coverage:** dot/bracket equivalence, case insensitivity, deleted column, unknown member, reserved names
+
+### DEBT / TRANSITION convention
+
+```typescript
+// DEBT(v1.5): comparison engine still JS-native; needs __dsl_compare__
+// TRANSITION(v1.4): remove after member_set migration — native-property sync
+```
+
+- `DEBT(v1.x)` — known limitation, deferred to specified version
+- `TRANSITION(v1.x)` — temporary bridge, must be removed in specified version
+- Не TODO/FIXME/HACK — documented technical debt с версией и контекстом
+- Snapshot-тесты проверяют, что DEBT-код функционально корректен
 
 ### Execution envelope
 
@@ -360,8 +439,8 @@ bun run test           # deep compare actual vs expected
 bun run test-update    # перезаписать expected из actual
 ```
 
-- `tests/cases/*.os` + `*.meta.json` — test inputs
-- `tests/expected/*.expected.json` — golden snapshots
+- `tests/cases/**/*.os` + `*.meta.json` — test inputs (рекурсивно)
+- `tests/expected/*.expected.json` — golden snapshots (flat basename lookup)
 - Динамика (даты, line numbers) нормализуется при сравнении
 - `writeSnapshot` (raw) + `normalizeForComparison` (normalized) — два отдельных этапа
 
@@ -497,24 +576,68 @@ bun run test-update    # перезаписать expected из actual
 - [x] `__dsl_index__` для ValueTableRow — проверяет существование колонки через `owner.Колонки.Найти(name)` перед чтением из `__values__`. Доступ к удалённой колонке → `"Колонка не найдена"` (1С-поведение)
 - [x] `parseColumnList` — strtok-style split: ведущие запятые пропускаются, пустые хвостовые токены не создаются. Пустой trimmed-segment → `"пустое имя колонки"`. Объясняет: `", Тест"` valid, `"Тест, "` throws
 
-**v1.4 — Unified member access + real index engine**
-- [ ] `__dsl_member_get__` / `__dsl_member_set__` — unified property dispatch для dot и bracket
-- [ ] Case-insensitive dot-access на ValueTableRow (`row.К1` = `row["К1"]`)
-- [ ] Убрать transitional native-property fallback в НайтиСтроки и __dsl_index__
-- [ ] Real index maintenance — B-tree/hash, НайтиСтроки с индексной оптимизацией
-- [x] `Свернуть()` — real aggregation (type-sensitive grouping key, column projection, native property sync via rowSet, exclude group columns from auto-sums)
-- [ ] Column-bound storage — row хранит данные по identity колонки, не по имени
+**v1.3.x — ValueTable stability fixes + BSL alignment (реализовано)**
+- [x] `defineMethod` с опциональным `configurable` (default `false`)
+- [x] Убраны `"индекс"`, `"сумма"`, `"количество"` из `RESERVED_COLUMN_METHODS`
+- [x] `toString` на всех `Object.create(null)` DSL-объектах
+- [x] Убран owner-check в `Скопировать(МассивСтрок)`
+- [x] Заменён `.Количество?.()` на `.__items__?.length`
+- [x] Компилятор: dot-access присваивания через `__dsl_index_set__`
+- [x] `normalizeForComparison`: нормализация таймингов
+- [x] `ColumnDef.toString` → `"КолонкаТаблицыЗначений"`
+- [x] `row.toString` → `"СтрокаТаблицыЗначений"`
+- [x] `defineMethod` error wrapping (wrapper + inner)
+- [x] `coerceForDisplay` — единый display-helper
+- [x] `formatDslNumber` — decimal comma + space thousand separator
+- [x] `Сдвинуть` — validation order: coercion → NaN → ownership → bounds
+- [x] `parseColumnList` — strtok-style split
+- [x] `__dsl_index__` для ValueTableRow проверяет существование колонки
+- [x] `Свернуть()` — real aggregation (type-sensitive, column projection, exclude group cols from auto-sums, native property sync)
+- [x] Timing test deactivated (non-deterministic)
 
-**v1.5 — Типизация и object model hardening**
+**v1.4 — Unified member access (в работе)**
+
+**Phase A — Foundation (6 steps, реализовано)**
+- [x] A.1: `abi.ts` — types-only DSLRuntimeABI_v1_3_3 + ABI_CONSTANTS
+- [x] A.2: `contract.ts` — mechanical extraction (DisplayContract, TypeContract, CoercionContract)
+- [x] A.3: Recursive test discovery + test file reorganization
+- [x] A.4: Invariant tests (`member-access.invariant.ts`, 9 invariants)
+- [x] A.5: `DiagnosticsCollector` — compile-time only, all throw-sites instrumented
+- [x] A.6: `DEBT(v1.5)` / `TRANSITION(v1.4)` markers across codebase
+
+**Phase B — Member dispatch (3 stages)**
+- [ ] B.0: Golden compile snapshots + ABI assertion test
+- [ ] B.1: `__dsl_member_get__` — read-only dispatch, compile.ts dot/bracket → member_get
+- [ ] B.2: Stabilization — remove transitional fallbacks (native-property sync, НайтиСтроки, Свернуть)
+- [ ] B.3: `__dsl_member_set__` — write dispatch, compile.ts assignment → member_set
+- [ ] B.4: Remove `__dsl_index__` / `__dsl_index_set__` (replaced by member_get/member_set)
+
+**Phase C — Hardening**
+- [ ] C.1: Symbol migration (`__dsl_type__` → Symbol, `__values__` → Symbol)
+- [ ] C.2: `RuntimeContext` — formalize context object interface
+- [ ] C.3: RFC-0001 — document member dispatch architecture
+- [ ] C.4: Docs update (object-model.md, runtime-semantics.md)
+- [ ] C.5: v1.4.0 tag
+
+**v1.5 — Comparison engine + object model hardening (deferred)**
+- [ ] Comparison engine (`__dsl_compare__` — replaces `===`, `>`, `<`, `>=`, `<=`)
+- [ ] Logical operators (`__dsl_and__` / `__dsl_or__` — И/ИЛИ currently emit invalid JS)
 - [ ] `ОписаниеТипов` — real type validation (не stub)
 - [ ] Итог / Итого на ТаблицаЗначений
-- [ ] `row.К1` генерирует `__dsl_member_set__("К1", val)` (compile-time)
 - [ ] No accidental prototype-chain access в runtime
-- [ ] Чистка: вынести array/structure обратно в builtins или оставить в objects/ окончательно
+- [ ] DSLValue wrapper (type-safe value container)
+- [ ] Object shapes (fast property lookup)
+- [ ] Column-bound storage (identity-based, not name-based)
+- [ ] Real index engine (B-tree/hash, index-optimized НайтиСтроки)
+- [ ] Чистка: array/structure location (builtins vs objects/)
 
-**v1.2 items (carried forward)**
-- [ ] Вложенные процедуры/функции (замыкания)
+**v2.0 — Инструментарий**
+- [ ] Source maps для отладки
+- [ ] Language Server Protocol
+- [ ] Профайлер
+- [ ] JSON ввод/вывод для AST
 - [ ] Client AST interpreter (без `eval`/`new Function`)
+- [ ] Вложенные процедуры/функции (замыкания)
 
 **v2.0 — Инструментарий**
 - [ ] Source maps для отладки
