@@ -19,6 +19,7 @@
  */
 
 import type { DSLValueTableRow } from "./objects/value-table-row";
+import { rowGet } from "./objects/value-table-row";
 import type { ColumnDef } from "./objects/value-table-columns";
 import type { DSLIndexDef } from "./objects/value-table-indexes";
 import type { DSLType } from "./objects/type";
@@ -98,6 +99,30 @@ export function dispatchMemberSet(target: any, prop: string, value: any): void {
  */
 registerMemberGetter("Структура", (target: any, prop: string) => {
   return target.Свойство(prop);
+});
+
+// ===== B.1.4: ValueTableRow dispatch =====
+
+/**
+ * Row dispatch делегирует rowGet() — единственный source of truth
+ * для lookup из __values__.
+ *
+ * Почему не прямой target[prop]:
+ *   - Row data живёт в __values__[lowerKey], не как JS properties
+ *   - rowGet() инкапсулирует lowercase + column-existence check
+ *   - Нативный fallback target[prop] — TRANSITION(v1.4), удаляется в B.2
+ *
+ * Missing column:
+ *   - dot-access (member_get): возвращает undefined (BSL dot semantics)
+ *   - bracket-access (__dsl_index__): throw "Колонка не найдена" (legacy до B.1.6)
+ *   Два разных поведения — intentional split до B.1.6
+ *
+ * ValueTableRow member access is authoritative through rowGet().
+ * Native JS properties are transitional only and must not become source-of-truth.
+ */
+registerMemberGetter("ValueTableRow", (target: any, prop: string) => {
+  // TRANSITION(v1.4): add debug counters under flag
+  return rowGet(target, prop);
 });
 
 // ----- Debug instrumentation (disabled by default) -----

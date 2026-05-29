@@ -339,6 +339,8 @@ interface RuntimeCapabilities {
 
 21. **Compiler has two independent dot-chain lowering pipelines.** `parsePrimary` / `parseMethodChain` handles expression-context chains (`a = Obj.Prop`), while `parseStatement` inline chain (line 1071) handles statement-context chains (`Obj.Prop.Method()`). До B1.2 оба генерировали native JS `.prop`; B1.2 переключил оба на `__dsl_member_get__`. Write-paths (`Obj.Prop = v`, `Obj["Prop"] = v`) остаются на `__dsl_index_set__` до B.3, bracket-read на `__dsl_index__` до B.1.6. Это documented topology split, not bug. B.3 write dispatch and debugger hooks потребуют unified IR.
 
+22. **ValueTableRow member access is authoritative through rowGet().** Native JS properties (`target[prop]`) are transitional only and must not become source-of-truth. dispatchMemberGet для Row делегирует rowGet() — единственный source of truth для lowercase lookup в `__values__`. После B.1.6 и B.2 все read-paths (member_get, __dsl_index__, НайтиСтроки) должны конвергировать в rowGet().
+
 ### Contract extraction pattern — `contract.ts`
 
 `runtime/shared/contract.ts` содержит **группированные объекты**, не плоские экспорты:
@@ -623,7 +625,15 @@ bun run test-update    # перезаписать expected из actual
   - compile.ts: +списокзначений/картинка в ALL_CONSTRUCTORS; fix: collectFunctions skips default-value tokens
   - НаправлениеСортировки: frozen singleton в createContext() (server + perf harness)
   - value-list.os: 85 assertions (412 строк, 17 процедур)
-- [ ] B.1.4: ValueTableRow dispatch — row dispatch with debug counters
+- [x] B.1.4: ValueTableRow dispatch — rowGet handler in member-get registry (coherence test + perf canary)
+  - Handler delegates to `rowGet(target, prop)` — единственный source of truth
+  - Нет повторной реализации lookup в dispatch layer
+  - coherence invariant: `Стр["К1"] = Стр.К1` (member_get vs __dsl_index__)
+  - missing column dot → `undefined`, missing column bracket → throw (intentional split до B.1.6)
+  - `row-access.warm` perf: ~2400ns median, -17% vs baseline (expected dispatch cost)
+  - Perf interpretation: `member-access.*` stable + `row-access.*` regressed → row lookup issue
+  - Perf interpretation: `member-get.registered` regressed → dispatch/runtime issue
+  - Perf interpretation: both regressed → registry polymorphism / branch growth
 - [ ] B.1.5: Polymorphic unifying dispatch — registry-based polymorphic dispatch
 - [ ] B.1.6: Remove transitional read fallbacks — stabilization after all read handlers registered
 - [ ] B.2: Stabilization — remove transitional fallbacks (native-property sync, НайтиСтроки, Свернуть)

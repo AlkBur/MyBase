@@ -1,0 +1,41 @@
+{
+  "version": 1,
+  "success": true,
+  "output": [
+    {
+      "type": "message",
+      "value": "10"
+    },
+    {
+      "type": "message",
+      "value": "привет"
+    },
+    {
+      "type": "message",
+      "value": "10"
+    },
+    {
+      "type": "message",
+      "value": "coherent"
+    },
+    {
+      "type": "message",
+      "value": ""
+    },
+    {
+      "type": "message",
+      "value": "err1"
+    },
+    {
+      "type": "message",
+      "value": "20"
+    },
+    {
+      "type": "message",
+      "value": "20"
+    }
+  ],
+  "result": null,
+  "error": null,
+  "runtimeVersion": "1.3.3"
+}
