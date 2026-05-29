@@ -33,13 +33,32 @@ export type MemberSetter = (target: any, prop: string, value: any) => void;
 
 const memberGetRegistry = new Map<string, MemberGetter>();
 const memberSetRegistry = new Map<string, MemberSetter>();
+let registrySealed = false;
 
+/**
+ * Регистрирует getter для DSL-типа.
+ * После sealMemberRegistry() вызов бросит ошибку.
+ */
 export function registerMemberGetter(typeName: string, getter: MemberGetter): void {
+  if (registrySealed) throw new Error("Member dispatch registry is sealed");
   memberGetRegistry.set(typeName, getter);
 }
 
+/**
+ * Регистрирует setter для DSL-типа.
+ * После sealMemberRegistry() вызов бросит ошибку.
+ */
 export function registerMemberSetter(typeName: string, setter: MemberSetter): void {
+  if (registrySealed) throw new Error("Member dispatch registry is sealed");
   memberSetRegistry.set(typeName, setter);
+}
+
+/**
+ * Запечатывает registry — запрещает дальнейшие регистрации.
+ * Используется в benchmark'ах для стабилизации JIT assumptions.
+ */
+export function sealMemberRegistry(): void {
+  registrySealed = true;
 }
 
 // ----- Dispatch -----

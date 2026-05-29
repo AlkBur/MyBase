@@ -33,6 +33,7 @@ import { scenarios as arrayAppend } from "./regression/array-append.bench";
 import { scenarios as structureLookup } from "./regression/structure-lookup.bench";
 import { scenarios as compilation } from "./regression/compilation.bench";
 import { scenarios as nativeComparison } from "./native/native-comparison.bench";
+import { scenarios as memberGet } from "./member-dispatch/member-get.bench";
 
 const ALL_SCENARIOS: BenchmarkScenario[] = [
   ...memberAccess,
@@ -43,6 +44,7 @@ const ALL_SCENARIOS: BenchmarkScenario[] = [
   ...structureLookup,
   ...compilation,
   ...nativeComparison,
+  ...memberGet,
 ];
 
 // ---- CLI parsing ----
