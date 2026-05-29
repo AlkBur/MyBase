@@ -109,3 +109,11 @@ export function isDSLUUID(obj: any): boolean {
 export function isDSLType(obj: any): boolean {
   return obj != null && obj.__dsl_type__ === "Type";
 }
+
+export function isDSLValueList(obj: any): boolean {
+  return obj != null && obj.__dsl_type__ === "ValueList";
+}
+
+export function isDSLValueListItem(obj: any): boolean {
+  return obj != null && obj.__dsl_type__ === "ValueListItem";
+}

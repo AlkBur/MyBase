@@ -27,6 +27,8 @@ import {
   getDSLType,
   rowGet,
   rowSet,
+  createValueList,
+  createValueListItem,
   isDSLValueTable,
   isDSLValueTableRow,
   isDSLColumns,
@@ -37,6 +39,8 @@ import {
   isDSLFixedArray,
   isDSLUUID,
   isDSLType,
+  isDSLValueList,
+  isDSLValueListItem,
 } from "./objects";
 import { dispatchMemberGet } from "./member-dispatch";
 import { DSRuntimeError } from "./errors";
@@ -90,6 +94,8 @@ export type BuiltinFactories = {
   __dsl_number__: (value: any) => number;
   __dsl_currentUniversalDateInMillis__: () => number;
   __dsl_newStringQualifiers__: (length?: number) => any;
+  __dsl_newValueList__: () => any;
+  __dsl_newPicture__: () => any;
 };
 
 /**
@@ -238,6 +244,21 @@ export function createBuiltins(output: OutputEvent[]): BuiltinFactories {
 
     __dsl_newUUID__: () => createUUID(),
 
+    __dsl_newValueList__: () => createValueList(),
+
+    __dsl_newPicture__: () => {
+      const pic = Object.create(null);
+      Object.defineProperty(pic, "toString", {
+        value: () => "Картинка",
+        enumerable: false, configurable: true, writable: true,
+      });
+      Object.defineProperty(pic, "__dsl_type__", {
+        value: "Picture",
+        enumerable: false, writable: false, configurable: false,
+      });
+      return pic;
+    },
+
     // ---- Тип() ----
     __dsl_type__: (name: string) => getDSLType(name),
 
@@ -248,6 +269,8 @@ export function createBuiltins(output: OutputEvent[]): BuiltinFactories {
       if (typeof value === "boolean") return getDSLType("Булево");
       if (typeof value === "number") return getDSLType("Число");
       if (typeof value === "string") return getDSLType("Строка");
+      if (isDSLValueListItem(value)) return getDSLType("ЭлементСпискаЗначений");
+      if (isDSLValueList(value)) return getDSLType("СписокЗначений");
       if (isDSLFixedArray(value)) return getDSLType("ФиксированныйМассив");
       if (Array.isArray(value)) return getDSLType("Массив");
       if (isDSLFixedMap(value)) return getDSLType("ФиксированноеСоответствие");
@@ -255,6 +278,12 @@ export function createBuiltins(output: OutputEvent[]): BuiltinFactories {
       if (isDSLUUID(value)) return getDSLType("УникальныйИдентификатор");
       if (isDSLType(value)) return getDSLType("Тип");
       if (value instanceof Date) return getDSLType("Дата");
+
+      // Picture — stub-object, inline guard без отдельного type guard файла
+      if (value != null && value.__dsl_type__ === "Picture") {
+        return getDSLType("Картинка");
+      }
+
       return getDSLType("Неопределено");
     },
 
@@ -440,6 +469,15 @@ export function createBuiltins(output: OutputEvent[]): BuiltinFactories {
         return obj.__map__.get(index);
       }
 
+      // ValueList — доступ к элементу по индексу
+      if (isDSLValueList(obj)) {
+        const idx = Number(index);
+        if (idx < 0 || idx >= obj.__items__.length || !Number.isInteger(idx)) {
+          throw new Error("Значение индекса выходит за пределы диапазона");
+        }
+        return obj.__items__[idx];
+      }
+
       // fallback: plain JS access
       // DEBT(v1.4): prototype-chain traversal currently allowed.
       // member dispatch hardens to own-properties only.
@@ -498,6 +536,11 @@ export function createBuiltins(output: OutputEvent[]): BuiltinFactories {
 
       // FixedArray — read-only, запись запрещена
       if (isDSLFixedArray(obj)) {
+        throw new Error("Индексированное значение доступно только для чтения");
+      }
+
+      // ValueList — read-only, запись запрещена
+      if (isDSLValueList(obj)) {
         throw new Error("Индексированное значение доступно только для чтения");
       }
 

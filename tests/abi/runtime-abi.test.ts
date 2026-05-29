@@ -127,6 +127,9 @@ runTest("DSL object types have constructor coverage", () => {
     Type: null, // Тип(имя) — builtin, не конструктор
     TypeDescription: "ОписаниеТипов",
     StringQualifiers: "КвалификаторыСтроки",
+    ValueList: "СписокЗначений",
+    ValueListItem: null,
+    Picture: "Картинка",
   };
 
   for (const typeName of dslTypes) {

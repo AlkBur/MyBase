@@ -87,6 +87,8 @@ export const ABI_CONSTANTS: DSLRuntimeABI_v1_3_3 = Object.freeze({
     "__dsl_newMap__",
     "__dsl_newFixedMap__",
     "__dsl_newUUID__",
+    "__dsl_newValueList__",
+    "__dsl_newPicture__",
     "__dsl_type__",
     "__dsl_typeOf__",
     "__dsl_add__",
@@ -135,6 +137,9 @@ export const ABI_CONSTANTS: DSLRuntimeABI_v1_3_3 = Object.freeze({
     Type: "Type",
     TypeDescription: "TypeDescription",
     StringQualifiers: "StringQualifiers",
+    ValueList: "ValueList",
+    ValueListItem: "ValueListItem",
+    Picture: "Picture",
   },
 
   compileModes: {

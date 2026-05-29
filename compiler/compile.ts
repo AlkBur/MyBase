@@ -115,6 +115,8 @@ const ALL_CONSTRUCTORS: Record<string, string> = {
   "фиксированноесоответствие": "__dsl_newFixedMap__",
   "уникальныйидентификатор": "__dsl_newUUID__",
   "квалификаторыстроки": "__dsl_newStringQualifiers__",
+  "списокзначений": "__dsl_newValueList__",
+  "картинка": "__dsl_newPicture__",
 };
 
 /** Строит карту builtins, разрешённых для данного runtime */
@@ -238,7 +240,22 @@ class Compiler {
                 // (не входит в mandatory)
                 const nextTok = this.tokens[j + 1];
                 if (nextTok?.type === "OPERATOR" && nextTok.value === "=") {
-                  // параметр с default — не обязательный
+                  // Параметр с default — не обязательный.
+                  // Пропускаем всё до разделителя (,) или закрывающей скобки ()),
+                  // чтобы не посчитать идентификаторы в выражении по умолчанию
+                  // как отдельные параметры.
+                  j += 2; // перешагиваем = и первый токен значения
+                  while (j < this.tokens.length) {
+                    const tok = this.tokens[j];
+                    if (tok?.type === "OPERATOR" && tok.value === ",") break;
+                    if (tok?.type === "OPERATOR" && tok.value === ")") {
+                      // Если наткнулись на закрывающую скобку, то это конец
+                      // списка параметров — выходим из обоих циклов
+                      j--; // откатываемся, чтобы внешний цикл обработал )
+                      break;
+                    }
+                    j++;
+                  }
                 } else {
                   mandatory++;
                 }

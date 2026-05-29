@@ -168,6 +168,8 @@ const BUILTIN_KEYS: (keyof BuiltinFactories)[] = [
   "__dsl_number__",
   "__dsl_currentUniversalDateInMillis__",
   "__dsl_newStringQualifiers__",
+  "__dsl_newValueList__",
+  "__dsl_newPicture__",
   "__dsl_member_get__",
 ];
 
@@ -312,11 +314,24 @@ export class ServerRuntime implements DSRuntime {
    * и функции не конфликтовали по именам.
    */
   private createContext(): Record<string, any> {
-    return {
+    const ctx = {
       __variables__: new CaseInsensitiveMap(),
       __functions__: new CaseInsensitiveMap(),
       __execDepth__: 0,
     };
+    // Предустановленные системные перечисления
+    const sortDirection = {
+      Возр: "Возр",
+      Убыв: "Убыв",
+      toString: () => "НаправлениеСортировки",
+    };
+    Object.defineProperty(sortDirection, "__dsl_type__", {
+      value: "SortDirection",
+      enumerable: false, writable: false, configurable: false,
+    });
+    Object.freeze(sortDirection);
+    ctx.__variables__.set("НаправлениеСортировки", sortDirection);
+    return ctx;
   }
 
   // ---- eval (Вычислить) ----

@@ -14,6 +14,7 @@ export { createValueTableColumns } from "./value-table-columns";
 export type { ColumnDef } from "./value-table-columns";
 export { createValueTableIndexes } from "./value-table-indexes";
 export type { DSLIndexDef } from "./value-table-indexes";
+export { createValueList, createValueListItem } from "./list";
 export { createMap } from "./map";
 export { getDSLType } from "./type";
 export type { DSLType } from "./type";
@@ -33,4 +34,6 @@ export {
   isDSLFixedMap,
   isDSLUUID,
   isDSLType,
+  isDSLValueList,
+  isDSLValueListItem,
 } from "./helpers";

@@ -68,6 +68,7 @@ bun run clean         # удалить data.db и app.exe
       type.ts               ← Тип() (модульный кэш синглтонов, display-name mapping)
       uuid.ts               ← УникальныйИдентификатор (crypto.randomUUID)
       index.ts              ← re-exports
+      list.ts               ← СписокЗначений + ЭлементСпискаЗначений (v1.4)
 
   /server
     capabilities.ts   ← serverCapabilities (Сообщить, Запрос, Массив, Структура, ТаблицаЗначений, ...)
@@ -154,8 +155,8 @@ interface RuntimeCapabilities {
 }
 ```
 
-- `SERVER_CAPABILITIES`: все функции + `Строка`, `Вычислить`, `Тип` + `Запрос`, `Массив`, `Структура`, `ТаблицаЗначений`, `ОписаниеТипов`, `Соответствие`, `УникальныйИдентификатор`
-- `CLIENT_CAPABILITIES`: все функции + `Строка`, `Вычислить`, `Тип` — без `Запрос`
+- `SERVER_CAPABILITIES`: все функции + `Строка`, `Вычислить`, `Тип` + `Запрос`, `Массив`, `Структура`, `ТаблицаЗначений`, `ОписаниеТипов`, `Соответствие`, `УникальныйИдентификатор`, `СписокЗначений`, `Картинка`
+- `CLIENT_CAPABILITIES`: все функции + `Строка`, `Вычислить`, `Тип` — без `Запрос`; с `СписокЗначений`, `Картинка`
 
 Компилятор валидирует доступность для target:
 - `Новый Запрос` в client → `Конструктор "Запрос" недоступен для target=client`
@@ -192,6 +193,10 @@ interface RuntimeCapabilities {
 - `ФиксированныйМассив[index] = value` → `"Индексированное значение доступно только для чтения"`
 - `Новый Соответствие` — identity-based Map (native JS Map), ключи любых типов
 - `Новый УникальныйИдентификатор` — UUID v4 (crypto.randomUUID)
+- `СписокЗначений[index] = value` → `"Индексированное значение доступно только для чтения"`
+- `Новый СписокЗначений` — динамический список элементов с метаданными (Значение, Представление, Пометка, Картинка); 0-based; read-only по индексу
+- `НаправлениеСортировки.Возр` / `.Убыв` — системное перечисление (предустановлено в context)
+- `Новый Картинка` — stub-конструктор; `ТипЗнч` возвращает `Тип("Картинка")` (inline guard в `__dsl_typeOf__`)
 - `Тип("Строка")` — singleton из модульного кэша, reference identity для ключей Map
 
 ### Statement grammar (дополнения)
@@ -444,6 +449,7 @@ bun run test-update    # перезаписать expected из actual
 - `tests/cases/**/*.os` + `*.meta.json` — test inputs (рекурсивно)
 - `tests/expected/*.expected.json` — golden snapshots (flat basename lookup)
 - Динамика (даты, line numbers) нормализуется при сравнении
+- `СписокЗначений` (value-list.os) — 412 строк, 17 процедур, BSL-aligned API + invariants (stable sort, identity-through-index, string-coercion policy, ТипЗнч Картинка)
 - `writeSnapshot` (raw) + `normalizeForComparison` (normalized) — два отдельных этапа
 
 ### SQLite из DSL (server runtime only)
@@ -610,7 +616,13 @@ bun run test-update    # перезаписать expected из actual
 **Phase B — Member dispatch**
 - [x] B.0: Golden compile snapshots + ABI assertion test
 - [x] **B.1 — `__dsl_member_get__` builtin + read-side lowering** (B1.1 builtin+B1.2 compile.ts)
-- [ ] B.1.3: Structure dispatch — register Structure handler in member-dispatch registry
+- [x] B.1.3: Structure dispatch — register Structure handler in member-dispatch registry
+- [x] B.1.3b: ValueList / Picture / SortDirection — СписокЗначений, Картинка, НаправлениеСортировки (additive, parallel session)
+  - list.ts: createValueList + createValueListItem (full method surface)
+  - builtins.ts: +__dsl_newValueList__, +__dsl_newPicture__, index/index_set dispatch, __dsl_typeOf__ guard
+  - compile.ts: +списокзначений/картинка в ALL_CONSTRUCTORS; fix: collectFunctions skips default-value tokens
+  - НаправлениеСортировки: frozen singleton в createContext() (server + perf harness)
+  - value-list.os: 85 assertions (412 строк, 17 процедур)
 - [ ] B.1.4: ValueTableRow dispatch — row dispatch with debug counters
 - [ ] B.1.5: Polymorphic unifying dispatch — registry-based polymorphic dispatch
 - [ ] B.1.6: Remove transitional read fallbacks — stabilization after all read handlers registered
