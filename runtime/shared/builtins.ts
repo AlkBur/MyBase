@@ -38,6 +38,7 @@ import {
   isDSLUUID,
   isDSLType,
 } from "./objects";
+import { dispatchMemberGet } from "./member-dispatch";
 import { DSRuntimeError } from "./errors";
 import { DisplayContract, CoercionContract } from "./contract";
 const { coerceForDisplay, formatDslNumber } = DisplayContract;
@@ -72,6 +73,16 @@ export type BuiltinFactories = {
   __dsl_strGetLine__: (str: string, line: number) => string;
   __dsl_index__: (obj: any, index: any) => any;
   __dsl_index_set__: (obj: any, index: any, value: any) => void;
+  /**
+   * TRANSITION(v1.4):
+   *   dot-access lowering target.
+   *   Semantics intentionally incomplete until B.1.5 (polymorphic dispatch).
+   *
+   *   B.1.1: builtin added, delegates to dispatchMemberGet (registry-based).
+   *   B.1.2: compile.ts lowers dot-read → __dsl_member_get__.
+   *   B.1.3–B.1.5: registry populated with type-specific handlers.
+   */
+  __dsl_member_get__: (obj: any, prop: string) => unknown;
   __dsl_errorInfo__: (context: any) => { Описание: string };
   __dsl_strIsEmpty__: (str: any) => boolean;
   __dsl_trim__: (str: string) => string;
@@ -492,6 +503,20 @@ export function createBuiltins(output: OutputEvent[]): BuiltinFactories {
 
       // fallback: plain JS access
       obj[index] = value;
+    },
+
+    // ---- __dsl_member_get__ (dot-access target) ----
+
+    /**
+     * TRANSITION(v1.4):
+     *   Read member access — registry-based dispatch.
+     *
+     *   B.1.1: intentionally dumb — delegates to dispatchMemberGet.
+     *   B.1.2: compile.ts lowering target.
+     *   B.1.5: polymorphic dispatch через registry.
+     */
+    __dsl_member_get__: (obj: any, prop: string) => {
+      return dispatchMemberGet(obj, prop);
     },
 
     // ---- Информация об ошибке ----

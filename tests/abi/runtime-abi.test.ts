@@ -244,6 +244,26 @@ runTest("all capability functions map to __dsl_* builtins", () => {
 });
 
 // ======================================================================
+//  Invariant 8: __dsl_member_get__ present in BUILTIN_KEYS
+// ======================================================================
+
+runTest("__dsl_member_get__ is registered in ABI", () => {
+  const abiKeys = new Set(ABI_CONSTANTS.builtinKeys);
+  assert(
+    abiKeys.has("__dsl_member_get__"),
+    "__dsl_member_get__ not found in ABI_CONSTANTS.builtinKeys"
+  );
+});
+
+runTest("__dsl_member_get__ is in runtime BUILTIN_KEYS", () => {
+  const runtimeKeys = getBuiltinKeysFromRuntime();
+  assert(
+    runtimeKeys.includes("__dsl_member_get__"),
+    "__dsl_member_get__ not found in runtime BUILTIN_KEYS"
+  );
+});
+
+// ======================================================================
 //  Summary
 // ======================================================================
 

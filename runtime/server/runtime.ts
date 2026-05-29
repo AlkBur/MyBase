@@ -168,6 +168,7 @@ const BUILTIN_KEYS: (keyof BuiltinFactories)[] = [
   "__dsl_number__",
   "__dsl_currentUniversalDateInMillis__",
   "__dsl_newStringQualifiers__",
+  "__dsl_member_get__",
 ];
 
 /** Преобразует объект builtins в массив значений в порядке BUILTIN_KEYS */

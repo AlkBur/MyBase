@@ -100,6 +100,7 @@ export const ABI_CONSTANTS: DSLRuntimeABI_v1_3_3 = Object.freeze({
     "__dsl_number__",
     "__dsl_currentUniversalDateInMillis__",
     "__dsl_newStringQualifiers__",
+    "__dsl_member_get__",
   ],
 
   sandboxParamOrderFull: [
