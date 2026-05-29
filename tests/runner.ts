@@ -3,8 +3,8 @@
 //  Pipeline: actual → normalizeForComparison → deepEqual(expected)
 // ======================================================================
 
-import { readFileSync, existsSync, readdirSync, writeFileSync } from "fs";
-import { join } from "path";
+import { readFileSync, existsSync, readdirSync, writeFileSync, statSync } from "fs";
+import { join, relative, basename } from "path";
 import { Database } from "bun:sqlite";
 import { ServerRuntime } from "../runtime/server/runtime";
 import { ClientRuntime } from "../runtime/client/runtime";
@@ -112,7 +112,26 @@ let failed = 0;
 
 console.log(`🧪 Golden tests (${UPDATE_GOLDENS ? "UPDATE mode" : "CHECK mode"})\n`);
 
-const caseFiles = readdirSync(CASES_DIR).filter((f) => f.endsWith(".os")).sort();
+/**
+ * Рекурсивно собирает все .os файлы из CASES_DIR.
+ * Возвращает относительные пути от CASES_DIR (например "syntax/test-string.os").
+ * Сортировка детерминированная (en locale) — стабильна между ОС/CI.
+ */
+function findCaseFiles(dir: string, prefix = ""): string[] {
+  const entries = readdirSync(dir, { withFileTypes: true });
+  const files: string[] = [];
+  for (const entry of entries) {
+    const fullPath = join(dir, entry.name);
+    if (entry.isDirectory()) {
+      files.push(...findCaseFiles(fullPath, join(prefix, entry.name)));
+    } else if (entry.name.endsWith(".os")) {
+      files.push(join(prefix, entry.name));
+    }
+  }
+  return files.sort((a, b) => a.localeCompare(b, "en"));
+}
+
+const caseFiles = findCaseFiles(CASES_DIR);
 
 for (const file of caseFiles) {
   const casePath = join(CASES_DIR, file);
@@ -139,7 +158,8 @@ for (const file of caseFiles) {
     continue;
   }
 
-  const expectedPath = join(EXPECTED_DIR, file.replace(/\.os$/, ".expected.json"));
+  // Expected files stay flat in tests/expected/ — lookup by basename
+  const expectedPath = join(EXPECTED_DIR, basename(file).replace(/\.os$/, ".expected.json"));
 
   if (UPDATE_GOLDENS) {
     writeFileSync(expectedPath, JSON.stringify(writeSnapshot(result), null, 2), "utf-8");
