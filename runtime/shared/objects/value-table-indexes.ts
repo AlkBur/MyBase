@@ -105,6 +105,12 @@ export function createValueTableIndexes(): any {
 
   defineDSLType(indexes, "ValueTableIndexes");
 
+  // toString для String() / конкатенации (иначе Object.create(null) бросает "No default value" в Bun)
+  Object.defineProperty(indexes, "toString", {
+    value: () => "Индексы",
+    enumerable: false, configurable: true, writable: true,
+  });
+
   defineMethod(indexes, "Добавить", (fields: string) => {
     // Валидация: каждое поле должно существовать как колонка
     if (indexes.__owner__) {

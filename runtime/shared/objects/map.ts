@@ -65,6 +65,10 @@ export function createMap(): any {
     storage.set(key, value);
   });
 
+  defineMethod(map, "Получить", (key: any) => {
+    return storage.get(key);
+  });
+
   defineMethod(map, "Количество", () => storage.size);
 
   Object.defineProperty(map, "toString", {

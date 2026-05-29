@@ -75,6 +75,7 @@ const ALL_BUILTINS: Record<string, string> = {
   "StrCompare": "__dsl_strCompare__",
   "СтрНайти": "__dsl_strFind__",
   "StrFind": "__dsl_strFind__",
+  "Найти": "__dsl_strFind__",
   "Сред": "__dsl_strMid__",
   "СтрШаблон": "__dsl_strTemplate__",
   "StrTemplate": "__dsl_strTemplate__",
@@ -88,6 +89,11 @@ const ALL_BUILTINS: Record<string, string> = {
   "StrGetLine": "__dsl_strGetLine__",
   "Тип": "__dsl_type__",
   "ТипЗнч": "__dsl_typeOf__",
+  "ПустаяСтрока": "__dsl_strIsEmpty__",
+  "СокрЛП": "__dsl_trim__",
+  "КодСимвола": "__dsl_charCode__",
+  "Число": "__dsl_number__",
+  "ТекущаяУниверсальнаяДатаВМиллисекундах": "__dsl_currentUniversalDateInMillis__",
 };
 
 // ======================================================================
@@ -106,6 +112,7 @@ const ALL_CONSTRUCTORS: Record<string, string> = {
   "соответствие": "__dsl_newMap__",
   "фиксированноесоответствие": "__dsl_newFixedMap__",
   "уникальныйидентификатор": "__dsl_newUUID__",
+  "квалификаторыстроки": "__dsl_newStringQualifiers__",
 };
 
 /** Строит карту builtins, разрешённых для данного runtime */
@@ -140,7 +147,7 @@ function buildConstructorMap(caps: RuntimeCapabilities): Record<string, string> 
 const PRECEDENCE: Record<string, number> = {
   "ИЛИ": 1, "И": 2,
   "=": 3, "<>": 3, ">": 3, "<": 3, ">=": 3, "<=": 3,
-  "+": 4, "-": 4, "*": 5, "/": 5,
+  "+": 4, "-": 4, "*": 5, "/": 5, "%": 5,
 };
 
 // ======================================================================
@@ -163,13 +170,16 @@ class Compiler {
   /** Имена пользовательских функций (lowercase → original case) */
   private localFunctionsMap = new Map<string, string>();
   /** Арность пользовательских функций (lowercase → кол-во параметров) */
-  private functionArgCount = new Map<string, number>();
+  // Хранит { total: общее число параметров, mandatory: число обязательных (до первого =) }
+  private functionArgInfo = new Map<string, { total: number; mandatory: number }>();
   /** Разрешённые имена builtins (lowercase) */
   private allowedFunctions: Set<string>;
   /** Разрешённые конструкторы (lowercase) */
   private allowedConstructors: Set<string>;
   /** Режим компиляции: program — полный, expression — Вычислить(), fragment — Выполнить() */
   private mode: "program" | "expression" | "fragment" = "program";
+  /** Счётчик для генерации уникальных имён переменных в Для Каждого (избегает redeclare) */
+  private forEachCounter = 0;
 
   /** Токены, запрещённые в fragment-mode (compileFragment) */
   private static FORBIDDEN_IN_FRAGMENT = new Set(["Процедура", "Функция", "Перем", "Возврат"]);
@@ -195,7 +205,7 @@ class Compiler {
   // ====================================================================
   //  Первый проход — сбор имён функций и их арности
   //  Пробегает по токенам, находит Процедура/Функция, извлекает имя и
-  //  количество параметров. Сохраняет в localFunctionsMap и functionArgCount.
+  //  количество параметров. Сохраняет в localFunctionsMap и functionArgInfo.
   // ====================================================================
 
   collectFunctions(): void {
@@ -211,14 +221,25 @@ class Compiler {
           while (j < this.tokens.length && !(this.tokens[j]?.type === "OPERATOR" && this.tokens[j]?.value === "(")) j++;
           if (j < this.tokens.length) {
             j++;
-            let count = 0;
+            let total = 0;
+            let mandatory = 0;
             // Считаем IDENTIFIERы между скобками (параметры)
             // Пропускаем модификатор Знач (pass-by-value, в нашей модели игнорируется)
             while (j < this.tokens.length && !(this.tokens[j]?.type === "OPERATOR" && this.tokens[j]?.value === ")")) {
-              if (this.tokens[j]?.type === "IDENTIFIER" && this.tokens[j]?.value.toLowerCase() !== "знач") count++;
+              if (this.tokens[j]?.type === "IDENTIFIER" && this.tokens[j]?.value.toLowerCase() !== "знач") {
+                total++;
+                // Если следующий токен =, то параметр имеет значение по умолчанию
+                // (не входит в mandatory)
+                const nextTok = this.tokens[j + 1];
+                if (nextTok?.type === "OPERATOR" && nextTok.value === "=") {
+                  // параметр с default — не обязательный
+                } else {
+                  mandatory++;
+                }
+              }
               j++;
             }
-            this.functionArgCount.set(lowerName, count);
+            this.functionArgInfo.set(lowerName, { total, mandatory });
           }
         }
       }
@@ -285,13 +306,21 @@ class Compiler {
     this.consume(); // съедаем (
     const args = this.parseFunctionArgs();
 
-    // Валидация числа аргументов по functionArgCount (только для пользовательских)
-    if (this.functionArgCount.has(name.toLowerCase()) &&
-        args.length !== this.functionArgCount.get(name.toLowerCase())) {
-      throw new Error(
-        `Функция "${name}" ожидает ${this.functionArgCount.get(name.toLowerCase())} ` +
-        `аргументов, передано ${args.length} (строка ${line})`
-      );
+    // Валидация числа аргументов по functionArgInfo (только для пользовательских)
+    const argInfo = this.functionArgInfo.get(name.toLowerCase());
+    if (argInfo) {
+      if (args.length > argInfo.total) {
+        throw new Error(
+          `Функция "${name}" ожидает ${argInfo.total} ` +
+          `аргументов, передано ${args.length} (строка ${line})`
+        );
+      }
+      if (args.length < argInfo.mandatory) {
+        throw new Error(
+          `Функция "${name}" ожидает не менее ${argInfo.mandatory} ` +
+          `аргументов, передано ${args.length} (строка ${line})`
+        );
+      }
     }
 
     // Для Вычислить, ИнформацияОбОшибке, Выполнить автоматически подставляем context
@@ -346,12 +375,22 @@ class Compiler {
   private parseFunctionArgs(): string[] {
     const args: string[] = [];
     if (this.peek().value !== ")") {
-      args.push(this.parseExpression(0));
+      // Пропущенный первый аргумент: (, )
+      if (this.peek().type === "OPERATOR" && this.peek().value === ",") {
+        args.push("undefined");
+      } else {
+        args.push(this.parseExpression(0));
+      }
       while (this.peek().type === "OPERATOR" && this.peek().value === ",") {
         this.consume();
         // Разрешаем замыкающую запятую: Сообщить(1,) — 1С-совместимость
         if (this.peek().type === "OPERATOR" && this.peek().value === ")") break;
-        args.push(this.parseExpression(0));
+        // Пропущенный аргумент: , , (две запятые подряд) — значение не указано
+        if (this.peek().type === "OPERATOR" && (this.peek().value === "," || this.peek().value === ")")) {
+          args.push("undefined");
+        } else {
+          args.push(this.parseExpression(0));
+        }
       }
     }
     this.expect("OPERATOR", ")");
@@ -426,9 +465,17 @@ class Compiler {
    *
    * Это упрощает grammar и избегает newline-sensitive parsing.
    */
+  // Множество блоковых терминаторов, перед которыми ; может отсутствовать
+  private BLOCK_TERMINATORS = new Set([
+    "КонецЦикла", "КонецЕсли", "КонецПопытки", "КонецПроцедуры", "КонецФункции",
+    "Иначе", "ИначеЕсли", "Исключение",
+  ]);
+
   private expectStatementEnd(): void {
     // EOF — штатное завершение (fragment mode, последний statement)
     if (this.peek().type === "EOF") return;
+    // Блоковый терминатор — ; может отсутствовать (1С-стиль)
+    if (this.peek().type === "KEYWORD" && this.BLOCK_TERMINATORS.has(this.peek().value)) return;
     this.expect("OPERATOR", ";");
   }
 
@@ -464,14 +511,34 @@ class Compiler {
       this.consume();
       expr = `${t.value}(${this.parseExpression(6)})`;
     }
-    // ---- Date literal 'YYYYMMDD' ----
+    // ---- Date literal 'YYYYMMDD' / 'YYYY-MM-DD' / 'YYYY-MM-DD HH:MM:SS' ----
     else if (t.type === "DATE") {
       this.consume();
       const s = t.value;
-      const y = Number(s.slice(0, 4));
-      const m = Number(s.slice(4, 6));
-      const d = Number(s.slice(6, 8));
-      expr = `new Date(${y}, ${m - 1}, ${d})`;
+      // Парсим через split по нецифровым разделителям
+      const nums = s.split(/[^\d]/).map(Number);
+      const y = nums[0] ?? 0;
+      const m = nums[1] ?? 1;
+      const d = nums[2] ?? 1;
+      const h = nums[3] ?? 0;
+      const min = nums[4] ?? 0;
+      const sec = nums[5] ?? 0;
+      expr = `new Date(${y}, ${m - 1}, ${d}, ${h}, ${min}, ${sec})`;
+    }
+    // ---- Ternary ?(cond, a, b) - function-style ----
+    // 1C-синтаксис: ?(Условие, ЗначениеЕслиДа, ЗначениеЕслиНет)
+    // Специальная форма: распознаётся ДО generic call-chain, чтобы
+    // не конфликтовать с method-chain парсингом.
+    else if (t.type === "OPERATOR" && t.value === "?") {
+      this.consume();
+      this.expect("OPERATOR", "(");
+      const condition = this.parseExpression(0);
+      this.expect("OPERATOR", ",");
+      const thenVal = this.parseExpression(0);
+      this.expect("OPERATOR", ",");
+      const elseVal = this.parseExpression(0);
+      this.expect("OPERATOR", ")");
+      expr = `(${condition} ? ${thenVal} : ${elseVal})`;
     }
     // ---- Новый (конструктор) ----
     else if (t.type === "KEYWORD" && t.value === "Новый") {
@@ -608,16 +675,28 @@ class Compiler {
         const name = this.expect("IDENTIFIER").value;
         this.expect("OPERATOR", "(");
         const params: string[] = [];
-        // Парсим параметры с опциональным модификатором Знач
+        // Парсим параметры с опциональным модификатором Знач и значением по умолчанию
         if (this.peek().type === "IDENTIFIER") {
           // Пропускаем Знач
           if (this.peek().value.toLowerCase() === "знач") this.consume();
-          params.push(this.consume().value);
+          let paramName = this.consume().value;
+          // Параметр со значением по умолчанию
+          if (this.peek().type === "OPERATOR" && this.peek().value === "=") {
+            this.consume();
+            paramName += " = " + this.parseExpression(0);
+          }
+          params.push(paramName);
           while (this.peek().type === "OPERATOR" && this.peek().value === ",") {
             this.consume();
             // Пропускаем Знач
             if (this.peek().type === "IDENTIFIER" && this.peek().value.toLowerCase() === "знач") this.consume();
-            params.push(this.expect("IDENTIFIER").value);
+            let nextParam = this.expect("IDENTIFIER").value;
+            // Параметр со значением по умолчанию
+            if (this.peek().type === "OPERATOR" && this.peek().value === "=") {
+              this.consume();
+              nextParam += " = " + this.parseExpression(0);
+            }
+            params.push(nextParam);
           }
         }
         this.expect("OPERATOR", ")");
@@ -642,7 +721,10 @@ class Compiler {
         // Генерируем: function имя(параметры) { ... }
         this.emit(`function ${name}(${params.join(", ")}) {`, t.line);
         // Сохраняем параметры в контекст (чтобы были доступны как переменные)
-        for (const p of params) this.emit(`  context.__variables__.set(${JSON.stringify(p)}, ${p});`, t.line);
+        for (const p of params) {
+          const paramName = p.split(" = ")[0];
+          this.emit(`  context.__variables__.set(${JSON.stringify(paramName)}, ${paramName});`, t.line);
+        }
         for (const l of bodyLines) this.lines.push(l);
         this.emit("}", t.line);
         // Регистрируем функцию в контексте по имени
@@ -658,16 +740,28 @@ class Compiler {
         const name = this.expect("IDENTIFIER").value;
         this.expect("OPERATOR", "(");
         const params: string[] = [];
-        // Парсим параметры с опциональным модификатором Знач
+        // Парсим параметры с опциональным модификатором Знач и значением по умолчанию
         if (this.peek().type === "IDENTIFIER") {
           // Пропускаем Знач
           if (this.peek().value.toLowerCase() === "знач") this.consume();
-          params.push(this.consume().value);
+          let paramName = this.consume().value;
+          // Параметр со значением по умолчанию
+          if (this.peek().type === "OPERATOR" && this.peek().value === "=") {
+            this.consume();
+            paramName += " = " + this.parseExpression(0);
+          }
+          params.push(paramName);
           while (this.peek().type === "OPERATOR" && this.peek().value === ",") {
             this.consume();
             // Пропускаем Знач
             if (this.peek().type === "IDENTIFIER" && this.peek().value.toLowerCase() === "знач") this.consume();
-            params.push(this.expect("IDENTIFIER").value);
+            let nextParam = this.expect("IDENTIFIER").value;
+            // Параметр со значением по умолчанию
+            if (this.peek().type === "OPERATOR" && this.peek().value === "=") {
+              this.consume();
+              nextParam += " = " + this.parseExpression(0);
+            }
+            params.push(nextParam);
           }
         }
         this.expect("OPERATOR", ")");
@@ -689,7 +783,10 @@ class Compiler {
         this.expect("KEYWORD", "КонецФункции");
 
         this.emit(`function ${name}(${params.join(", ")}) {`, t.line);
-        for (const p of params) this.emit(`  context.__variables__.set(${JSON.stringify(p)}, ${p});`, t.line);
+        for (const p of params) {
+          const paramName = p.split(" = ")[0];
+          this.emit(`  context.__variables__.set(${JSON.stringify(paramName)}, ${paramName});`, t.line);
+        }
         for (const l of bodyLines) this.lines.push(l);
         this.emit("}", t.line);
         this.emit(`context.__functions__.set(${JSON.stringify(name)}, ${name});`, t.line);
@@ -765,23 +862,27 @@ class Compiler {
           const body = this.parseStatementsCapture(new Set(["КонецЦикла"]));
           this.expect("KEYWORD", "КонецЦикла");
 
+          this.forEachCounter++;
+          const it = `__iterable__${this.forEachCounter}`;
+          const item = `__item__${this.forEachCounter}`;
+          const prev = `__prev__${this.forEachCounter}`;
           // iterable validation
-          this.emit(`const __iterable__ = ${expr};`, t.line);
-          this.emit("if (!__iterable__ || typeof __iterable__[Symbol.iterator] !== 'function') {", t.line);
+          this.emit(`const ${it} = ${expr};`, t.line);
+          this.emit(`if (!${it} || typeof ${it}[Symbol.iterator] !== 'function') {`, t.line);
           this.emit(`  throw new Error("Значение не поддерживает итерацию (строка " + ${t.line} + ")");`, t.line);
           this.emit("}", t.line);
           // scope cleanup для loop variable
-          this.emit(`const __prev__ = context.__variables__.get(${JSON.stringify(varName)});`, t.line);
+          this.emit(`const ${prev} = context.__variables__.get(${JSON.stringify(varName)});`, t.line);
           this.emit("try {", t.line);
-          this.emit("  for (const __item__ of __iterable__) {", t.line);
-          this.emit(`    context.__variables__.set(${JSON.stringify(varName)}, __item__);`, t.line);
+          this.emit(`  for (const ${item} of ${it}) {`, t.line);
+          this.emit(`    context.__variables__.set(${JSON.stringify(varName)}, ${item});`, t.line);
           for (const l of body) this.lines.push(l);
           this.emit("  }", t.line);
           this.emit("} finally {", t.line);
-          this.emit("  if (__prev__ === undefined) {", t.line);
+          this.emit(`  if (${prev} === undefined) {`, t.line);
           this.emit(`    context.__variables__.delete(${JSON.stringify(varName)});`, t.line);
           this.emit("  } else {", t.line);
-          this.emit(`    context.__variables__.set(${JSON.stringify(varName)}, __prev__);`, t.line);
+          this.emit(`    context.__variables__.set(${JSON.stringify(varName)}, ${prev});`, t.line);
           this.emit("  }", t.line);
           this.emit("}", t.line);
           continue;
@@ -931,6 +1032,8 @@ class Compiler {
         //    Также поддерживает [index] после цепочки: obj.prop[index] = значение
         if (this.peek().type === "OPERATOR" && this.peek().value === ".") {
           let expr = this.emitRead(target);
+          // Для __dsl_index_set__ на dot-access: отслеживаем последнее свойство
+          let lastProp: string | null = null;
           while (this.peek().type === "OPERATOR" && this.peek().value === ".") {
             this.consume();
             const prop = this.expect("IDENTIFIER").value;
@@ -938,8 +1041,10 @@ class Compiler {
               this.consume();
               const args = this.parseFunctionArgs();
               expr = `${expr}.${prop}(${args.join(", ")})`;
+              lastProp = null; // method call — не property
             } else {
               expr = `${expr}.${prop}`;
+              lastProp = prop;
             }
           }
           // После цепочки может быть [index] доступ: obj.prop[index]
@@ -960,6 +1065,12 @@ class Compiler {
               // Генерируем __dsl_index_set__ из последней пары объект-индекс
               const last = bracketStack[bracketStack.length - 1]!;
               expr = `__dsl_index_set__(${last.obj}, ${last.idx}, ${value})`;
+            } else if (lastProp !== null) {
+              // Dot-access присваивание: obj.prop = val → __dsl_index_set__(obj, "prop", val)
+              // Нужно отделить объект от последнего свойства
+              const lastDot = expr.lastIndexOf(".");
+              const objExpr = expr.substring(0, lastDot);
+              expr = `__dsl_index_set__(${objExpr}, ${JSON.stringify(lastProp)}, ${value})`;
             } else {
               expr = `${expr} = ${value}`;
             }

@@ -7,6 +7,7 @@
  * Доступ:
  *   row["К1"] — через __dsl_index__ dispatch (case-insensitive)
  *   row.К1 — НЕ поддерживается в Phase 1 (falls back к native JS property)
+ *   row.Получить(индекс) — доступ по индексу колонки с bounds check
  *
  * Это intentional transitional behavior:
  *   - bracket-access — canonical API
@@ -14,7 +15,8 @@
  *   - future: __dsl_member_get__/__dsl_member_set__ унифицирует
  */
 
-import { defineDSLType, isDSLValueTableRow } from "./helpers";
+import { defineDSLType, defineMethod, isDSLValueTableRow } from "./helpers";
+import { DSRuntimeError } from "../errors";
 
 export type DSLValueTableRow = {
   __dsl_type__: "ValueTableRow";
@@ -31,13 +33,34 @@ export function createRow(owner: any): DSLValueTableRow {
   defineDSLType(row, "ValueTableRow");
   row.__values__ = Object.create(null);
   row.__owner__ = owner;
+
   // Строковое представление для Сообщить / Строка()
+  // BSL: String(СтрокаТаблицыЗначений) возвращает "СтрокаТаблицыЗначений",
+  // что matches diagnostic output и упрощает отладку.
+  // Ранее было принято решение вернуть "" на основе неоднозначного чтения BSL,
+  // но при сверке с golden snapshot выяснилось, что BSL-ожидание — именно имя типа.
   Object.defineProperty(row, "toString", {
     value: () => "СтрокаТаблицыЗначений",
-    enumerable: false,
-    configurable: true,
-    writable: true,
+    enumerable: false, configurable: true, writable: true,
   });
+
+  /**
+   * Получить(индекс) — возвращает значение колонки по индексу.
+   * 1С-семантика: 0-based индекс, bounds check.
+   */
+  defineMethod(row, "Получить", (index: any) => {
+    const idx = Number(index);
+    const colCount = owner.Колонки?.__items__?.length ?? 0;
+    if (isNaN(idx) || idx < 0 || idx >= colCount) {
+      throw new DSRuntimeError("Значение индекса выходит за пределы диапазона");
+    }
+    const colObj = owner.Колонки.__items__[idx];
+    if (!colObj) throw new DSRuntimeError("Значение индекса выходит за пределы диапазона");
+    const lower = String(colObj.Имя).toLowerCase();
+    const v = row.__values__[lower];
+    return v !== undefined ? v : undefined;
+  });
+
   return row;
 }
 
@@ -62,4 +85,7 @@ export function rowSet(row: any, key: string, value: unknown): void {
   }
   const lower = String(key).toLowerCase();
   row.__values__[lower] = value;
+  // Синхронизируем native property для dot-access консистентности
+  // (аналогично __dsl_index_set__ builtin, строка 507 builtins.ts)
+  (row as any)[String(key)] = value;
 }

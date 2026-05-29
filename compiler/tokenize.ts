@@ -135,7 +135,7 @@ export function tokenize(source: string): Token[] {
     }
 
     // ---- 6. Односимвольные операторы ----
-    if ("=+-*/;(),.<>&[]".includes(source.charAt(i))) {
+    if ("=+-*/;(),.<>&[]?%".includes(source.charAt(i))) {
       tokens.push({ type: "OPERATOR", value: source.charAt(i), line, col });
       i++; col++;
       continue;
@@ -161,7 +161,7 @@ export function tokenize(source: string): Token[] {
       continue;
     }
 
-    // ---- 8. Date literal 'YYYYMMDD' ----
+    // ---- 8. Date literal 'YYYYMMDD' / 'YYYY-MM-DD' / 'YYYY-MM-DD HH:MM:SS' ----
     if (source[i] === "'") {
       const startLine = line;
       const startCol = col;
@@ -174,7 +174,17 @@ export function tokenize(source: string): Token[] {
         throw new Error(`Незакрытая дата на строке ${startLine}`);
       }
       i++; col++;
-      if (!/^\d{8}$/.test(value)) {
+      // Допустимые форматы даты:
+      //   YYYYMMDD (8 цифр)
+      //   YYYY-MM-DD
+      //   YYYY-MM-DD HH:MM
+      //   YYYY-MM-DD HH:MM:SS
+      const isValidDate =
+        /^\d{8}$/.test(value) ||
+        /^\d{4}-\d{2}-\d{2}$/.test(value) ||
+        /^\d{4}-\d{2}-\d{2} \d{2}:\d{2}$/.test(value) ||
+        /^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/.test(value);
+      if (!isValidDate) {
         throw new Error(`Неверный формат даты '${value}' на строке ${startLine}`);
       }
       tokens.push({ type: "DATE", value, line: startLine, col: startCol });

@@ -10,11 +10,39 @@
  *   - чище в debug-выводе
  */
 
-export function defineMethod(obj: any, name: string, fn: Function): void {
+export function defineMethod(obj: any, name: string, fn: Function, configurable: boolean = false): void {
+  // Оборачиваем метод для единого форматирования BSL-ошибок.
+  // При выбрасывании исключения из метода (например, Сдвинуть → DSRuntimeError),
+  // мы перехватываем его и создаём новое с контекстным сообщением
+  // "Ошибка при вызове метода контекста (ИмяМетода)".
+  // Исходное сообщение сохраняется в __dsl_inner_message__ для ИнформацияОбОшибке().
+  //
+  // Почему не на уровне компилятора:
+  //   - централизованно в defineMethod, не нужно менять каждый метод вручную
+  //   - единый формат сообщений для всех DSL-методов
+  //   - защита от двойного wrapping через __dsl_error_wrapped__
+  const wrapped = (...args: any[]) => {
+    try {
+      return fn(...args);
+    } catch (e: any) {
+      // Предотвращаем двойной wrapping (если ошибка уже обёрнута)
+      if (e?.__dsl_error_wrapped__) throw e;
+
+      const inner = e instanceof Error ? e.message : String(e);
+      const wrappedErr = new Error(
+        `Ошибка при вызове метода контекста (${name})`
+      );
+      (wrappedErr as any).__dsl_error_wrapped__ = true;
+      (wrappedErr as any).__dsl_inner_message__ = inner;
+
+      throw wrappedErr;
+    }
+  };
+
   Object.defineProperty(obj, name, {
-    value: fn,
+    value: wrapped,
     enumerable: false,
-    configurable: false,
+    configurable,
     writable: false,
   });
 }

@@ -85,7 +85,9 @@ function normalizeForComparison(r: any): any {
   const normalizeOutput = (output: any[]) =>
     output.map((o: any) => {
       const value = typeof o.value === "string"
-        ? o.value.replace(/\d{2}\.\d{2}\.\d{4} \d{2}:\d{2}:\d{2}/g, "DD.MM.YYYY HH:mm:ss")
+        ? o.value
+            .replace(/\d{2}\.\d{2}\.\d{4} \d{2}:\d{2}:\d{2}/g, "DD.MM.YYYY HH:mm:ss")
+            .replace(/\(\d+ мс\)/g, "(N мс)")
         : o.value;
       return { type: o.type, value };
     });
@@ -127,7 +129,15 @@ for (const file of caseFiles) {
   const runtime = getRuntime(meta.runtime, db);
   const code = readFileSync(casePath, "utf-8");
   const req: ExecuteRequest = { code };
-  const result = runtime.execute(req);
+  let result: ExecutionResult;
+  try {
+    result = runtime.execute(req);
+  } catch (thrown: any) {
+    console.log(`\n     ❌ THROWN: ${thrown.message}`);
+    console.log(`     stack: ${(thrown.stack ?? "").split("\n").slice(0, 3).join(" | ")}`);
+    failed++;
+    continue;
+  }
 
   const expectedPath = join(EXPECTED_DIR, file.replace(/\.os$/, ".expected.json"));
 

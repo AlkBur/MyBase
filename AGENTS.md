@@ -300,6 +300,24 @@ interface RuntimeCapabilities {
 | Date-ключи в `Соответствие` нормализуются в YYYYMMDD | intentional — JS Date reference type, DSL date value type |
 | Date literal `'YYYYMMDD'` — единый токен DATE | intentional — только 8 цифр, без времени и таймзоны |
 
+### BSL Runtime Semantic Decisions (v1.3.x финальные)
+
+Ключевые semantic decisions, принятые при BSL-алигнменте runtime:
+
+| Решение | Rationale |
+|---------|-----------|
+| `ИнформацияОбОшибке().Описание` → `err.message` (wrapper) | Публичное API показывает обёрнутое сообщение `"Ошибка при вызове метода контекста (X)"`, а не inner cause. `err.__dsl_inner_message__` доступен для debug |
+| `row.toString` → `"СтрокаТаблицыЗначений"` | Diagnostic output, единый с ColumnDef (`"КолонкаТаблицыЗначений"`), не `""` |
+| `coerceForDisplay` — единый display-helper | nullish→`""`, bool→`"Да"`/`"Нет"`, number→`formatDslNumber`, остальное→`String(v)` |
+| `formatDslNumber` — decimal comma + space thousand separator | `1 234,5`, детерминированно, без `toLocaleString()` |
+| `Сдвинуть` validation order: coercion → NaN → ownership → bounds | BSL-permissive: `"2"` → 2, `"ё"` → NaN → `"Неверный тип аргумента"` |
+| `parseColumnList` → strtok-style | `", Тест"` → `["Тест"]` (leading comma skipped), `"Тест, "` → throw (space after comma creates empty token → пустое имя колонки) |
+| `__dsl_index__` для ValueTableRow проверяет существование колонки | Доступ к удалённой колонке → `"Колонка не найдена"`, не `undefined` |
+| `Свернуть` — type-sensitive grouping key | `number 12` ≠ `string "12"`, разные группы |
+| `Свернуть` — column projection | Негрупповые/несуммовые колонки удаляются после свёртки |
+| `Свернуть` — exclude group cols from auto-sums | Числовые колонки группировки не суммируются автоматически |
+| `Свернуть` — native property sync через rowSet | Все записи в `__values__` синхронизируют `row[String(key)] = value` |
+
 ### Compiler invariants
 
 Эти утверждения должны оставаться истинными при любых изменениях кода:
@@ -462,12 +480,29 @@ bun run test-update    # перезаписать expected из actual
 - [x] `TYPE_DISPLAY_NAMES`: "фиксированноесоответствие" → "Фиксированное соответствие"
 - [x] `fixed-map.os` — golden test (11 проверок, immutable semantics, copy-constructor, read-only, Получить)
 
+**v1.3.x — ValueTable stability fixes + BSL alignment**
+- [x] `defineMethod` с опциональным `configurable` (default `false`) — методы, перезаписываемые колонками, получают `configurable: true`
+- [x] Убраны `"индекс"`, `"сумма"`, `"количество"` из `RESERVED_COLUMN_METHODS` — имена публичного API можно использовать как имена колонок
+- [x] `toString` на всех 6 `Object.create(null)` DSL-объектах (ТаблицаЗначений, Колонки, Структура, ОписаниеТипов, КвалификаторыСтроки, Индексы) — предотвращает Bun `No default value` при `String()`
+- [x] Убран owner-check (`__owner__ !== table`) в `Скопировать(МассивСтрок)` — 1С позволяет копировать строки между таблицами
+- [x] Заменён `.Количество?.()` на `.__items__?.length` в 2 местах (value-table.ts, value-table-row.ts, builtins.ts) — когда колонка названа "Количество", метод не сломан
+- [x] Компилятор (compile.ts): dot-access присваивания (`obj.prop = val`) генерируют `__dsl_index_set__` вместо нативного JS — синхронизация `__values__` и native property на строках
+- [x] `normalizeForComparison` (runner.ts): нормализация `(N мс)` — стабильные snapshot-ы при нестабильных таймингах
+- [x] `ColumnDef.toString` → `"КолонкаТаблицыЗначений"` (value-table-columns.ts)
+- [x] `row.toString` → `"СтрокаТаблицыЗначений"` (value-table-row.ts) — diagnostic output, confirmed stable
+- [x] `defineMethod` error wrapping: `err.message` = wrapper message (публичное), `err.__dsl_inner_message__` = original (debug). `ИнформацияОбОшибке().Описание` → `err.message` (wrapper), не inner cause
+- [x] `coerceForDisplay` — единый display-helper: nullish→`""`, bool→`"Да"`/`"Нет"`, number→`formatDslNumber`, остальное→`String(v)`. Используется в `__dsl_log__`, `__dsl_strTemplate__`, `__dsl_format__`
+- [x] `formatDslNumber` — детерминированный: decimal comma (`,`) + space thousand separator (`1 234,5`). Без `toLocaleString()`, stable for CI
+- [x] `Сдвинуть` — validation order: coercion (Number) → NaN check (`"Неверный тип аргумента"`) → ownership check → bounds check. `"2"` coercing допустим, `"ё"` → NaN → `"Неверный тип аргумента"`
+- [x] `__dsl_index__` для ValueTableRow — проверяет существование колонки через `owner.Колонки.Найти(name)` перед чтением из `__values__`. Доступ к удалённой колонке → `"Колонка не найдена"` (1С-поведение)
+- [x] `parseColumnList` — strtok-style split: ведущие запятые пропускаются, пустые хвостовые токены не создаются. Пустой trimmed-segment → `"пустое имя колонки"`. Объясняет: `", Тест"` valid, `"Тест, "` throws
+
 **v1.4 — Unified member access + real index engine**
 - [ ] `__dsl_member_get__` / `__dsl_member_set__` — unified property dispatch для dot и bracket
 - [ ] Case-insensitive dot-access на ValueTableRow (`row.К1` = `row["К1"]`)
 - [ ] Убрать transitional native-property fallback в НайтиСтроки и __dsl_index__
 - [ ] Real index maintenance — B-tree/hash, НайтиСтроки с индексной оптимизацией
-- [ ] `Свернуть()` — real aggregation (группировка, суммирование)
+- [x] `Свернуть()` — real aggregation (type-sensitive grouping key, column projection, native property sync via rowSet, exclude group columns from auto-sums)
 - [ ] Column-bound storage — row хранит данные по identity колонки, не по имени
 
 **v1.5 — Типизация и object model hardening**

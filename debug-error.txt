@@ -1,0 +1,6 @@
+Error: Функция "Собщить" не определена на строке 2
+Stack: Error: Функция "Собщить" не определена на строке 2
+    at parseStatements (D:\PROJECTS\MyBase\compiler\compile.ts:1024:23)
+    at compileProgram (D:\PROJECTS\MyBase\compiler\compile.ts:1137:10)
+    at execute (D:\PROJECTS\MyBase\runtime\server\runtime.ts:245:37)
+    at D:\PROJECTS\MyBase\tests\runner.ts:134:22

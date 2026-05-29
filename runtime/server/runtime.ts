@@ -161,6 +161,12 @@ const BUILTIN_KEYS: (keyof BuiltinFactories)[] = [
   "__dsl_strGetLine__",
   "__dsl_index__",
   "__dsl_errorInfo__",
+  "__dsl_strIsEmpty__",
+  "__dsl_trim__",
+  "__dsl_charCode__",
+  "__dsl_number__",
+  "__dsl_currentUniversalDateInMillis__",
+  "__dsl_newStringQualifiers__",
 ];
 
 /** Преобразует объект builtins в массив значений в порядке BUILTIN_KEYS */
@@ -272,8 +278,12 @@ export class ServerRuntime implements DSRuntime {
       };
     } catch (e: any) {
       executeTime = performance.now() - (performance.now() - executeTime);
-      // Извлекаем line только если это DSRuntimeError
       const line = DSRuntimeError.is(e) ? e.line : undefined;
+      // Debug: write error + stack to file
+      try {
+        const { writeFileSync } = require("fs");
+        writeFileSync("debug-error.txt", `Error: ${e.message}\nStack: ${(e as any).stack ?? ""}\n`, "utf-8");
+      } catch {}
       const error: RuntimeError = { message: e.message, line };
       return {
         success: false,
