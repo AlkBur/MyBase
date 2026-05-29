@@ -1,0 +1,176 @@
+{
+  "$schema": "runtime-abi-snapshot",
+  "version": "1.3.3",
+  "generated": "2026-05-29",
+  "description": "Machine-readable ABI snapshot for diff tooling. All interfaces frozen at v1.3.3.",
+
+  "builtinKeys": [
+    "__dsl_log__",
+    "__dsl_currentDate__",
+    "__dsl_format__",
+    "__dsl_strStartsWith__",
+    "__dsl_strEndsWith__",
+    "__dsl_strSplit__",
+    "__dsl_strConcat__",
+    "__dsl_strCompare__",
+    "__dsl_strFind__",
+    "__dsl_strMid__",
+    "__dsl_strTemplate__",
+    "__dsl_nstr__",
+    "__dsl_newArray__",
+    "__dsl_newFixedArray__",
+    "__dsl_newStructure__",
+    "__dsl_newValueTable__",
+    "__dsl_newTypeDescription__",
+    "__dsl_newMap__",
+    "__dsl_newFixedMap__",
+    "__dsl_newUUID__",
+    "__dsl_type__",
+    "__dsl_typeOf__",
+    "__dsl_add__",
+    "__dsl_string__",
+    "__dsl_strGetLine__",
+    "__dsl_index__",
+    "__dsl_errorInfo__",
+    "__dsl_strIsEmpty__",
+    "__dsl_trim__",
+    "__dsl_charCode__",
+    "__dsl_number__",
+    "__dsl_currentUniversalDateInMillis__",
+    "__dsl_newStringQualifiers__"
+  ],
+
+  "sandboxParams": [
+    "context",
+    "__dsl_db__",
+    "__dsl_Query__",
+    "...BUILTIN_KEYS (33 params, order above)",
+    "__dsl_eval__",
+    "__dsl_exec__",
+    "__dsl_RuntimeError__",
+    "__dsl_index_set__"
+  ],
+
+  "sandboxParamsEval": [
+    "context",
+    "...BUILTIN_KEYS (33 params, order above)",
+    "__dsl_eval__"
+  ],
+
+  "compileModes": {
+    "program": "full sandbox: DB + Query + all builtins; declarations allowed (Процедура, Функция, Перем, Возврат)",
+    "expression": "limited sandbox: no DB, no Query; no statements; return-wrapped; recursion guard",
+    "fragment": "full sandbox: DB + Query; NO declarations; shared context with parent; recursion guard"
+  },
+
+  "compileLoweringPatterns": {
+    "variable_read": "context.__variables__.get(\"name\")",
+    "variable_write": "context.__variables__.set(\"name\", value)",
+    "function_call_user": "context.__functions__.get(\"name\")(...args)",
+    "function_call_builtin": "__dsl_builtinName__(...args)",
+    "constructor": "builtin function call (e.g. __dsl_newArray__)",
+    "dot_access_read": "expr.prop → __dsl_index__(expr, \"prop\")  [compile.ts:~1072]",
+    "dot_access_write": "expr.prop = val → __dsl_index_set__(expr, \"prop\", val)  [compile.ts:~1073]",
+    "bracket_access_read": "expr[index] → __dsl_index__(expr, index)",
+    "bracket_access_write": "expr[index] = val → __dsl_index_set__(expr, index, val)",
+    "method_chain": "expr.method(args) → compile-time resolved",
+    "binary_plus": "__dsl_add__(left, right)",
+    "for_loop": "while loop with .get/.set",
+    "for_each": "for (const __item__ of __iterable__) { .set(var, __item__); body } + scope cleanup",
+    "try_catch": "context.__lastException__ = null; try { ... } catch(__dsl_err__) { context.__lastException__ = __dsl_err__; ... }",
+    "throw": "throw new __dsl_RuntimeError__(expr, line)",
+    "return": "return expr (program mode only)",
+    "eval_expression": "compileExpression → return (jsCode); autosubstitutes context",
+    "exec_fragment": "compileFragment → no return wrapper; autosubstitutes context"
+  },
+
+  "dslObjectTypes": {
+    "ValueTable": "ТаблицаЗначений",
+    "ValueTableRow": "СтрокаТаблицыЗначений",
+    "ValueTableColumns": "КолонкиТаблицыЗначений",
+    "ValueTableIndexes": "ИндексыТаблицыЗначений",
+    "ValueTableIndex": "ИндексТаблицыЗначений",
+    "ColumnDef": "КолонкаТаблицыЗначений",
+    "Map": "Соответствие",
+    "FixedMap": "ФиксированноеСоответствие",
+    "FixedArray": "ФиксированныйМассив",
+    "Структура": "Структура",
+    "UniqueIdentifier": "УникальныйИдентификатор",
+    "Type": "Тип",
+    "TypeDescription": "ОписаниеТипов",
+    "StringQualifiers": "КвалификаторыСтроки"
+  },
+
+  "objectMethods": {
+    "Array": ["Добавить", "Количество", "ВГраница", "Вставить", "Удалить", "Очистить", "Найти"],
+    "FixedArray": ["Количество", "ВГраница"],
+    "Structure": ["Вставить", "Свойство", "Удалить", "Количество", "Свойства"],
+    "Map": ["Вставить", "Получить", "Количество"],
+    "FixedMap": ["Количество", "Получить"],
+    "ValueTable": ["Добавить", "Количество", "НайтиСтроки", "Удалить", "Свернуть", "Сдвинуть", "Скопировать", "ВыгрузитьСтруктуру"],
+    "ValueTableRow": ["Получить"],
+    "ValueTableColumns": ["Добавить", "Удалить", "Очистить", "Найти", "Вставить", "Индекс", "Количество"],
+    "ValueTableIndexes": ["Добавить", "Удалить", "Очистить", "Количество"]
+  },
+
+  "magicFields": {
+    "__dsl_type__": "string — runtime type tag (non-enumerable, readonly)",
+    "__values__": "Record<string,unknown> — case-insensitive storage на ValueTableRow",
+    "__owner__": "back-reference to parent table (ValueTableRow → ValueTable, Columns/Indexes → ValueTable)",
+    "__items__": "internal array storage (FixedArray, Columns, Indexes)",
+    "__map__": "internal Map storage (Соответствие)",
+    "__rows__": "internal row array (ValueTable)",
+    "__fields__": "string[] — index field names (ValueTableIndex)",
+    "__execDepth__": "number — shared recursion counter on context",
+    "__variables__": "CaseInsensitiveMap — DSL variables on context",
+    "__functions__": "CaseInsensitiveMap — DSL user functions on context",
+    "__lastException__": "any — last caught exception for ИнформацияОбОшибке()"
+  },
+
+  "specialSymbols": {
+    "DS_RUNTIME_ERROR": "Symbol(\"DS_RUNTIME_ERROR\") — branded marker on DSRuntimeError",
+    "Symbol.iterator": "used on ValueTableRows, ValueTableIndexes, IndexDef fields for Для Каждого"
+  },
+
+  "internalHelpers": {
+    "defineMethod": "adds non-enumerable method with error wrapping",
+    "defineDSLType": "sets __dsl_type__ non-enumerable readonly",
+    "coerceForDisplay": "DSL display coercion (Да/Нет, formatDslNumber)",
+    "dslCoerceString": "BSL string coercion for binary + (undefined→Неопределено, null→Null, etc.)",
+    "formatDslNumber": "deterministic number formatting (decimal comma, space thousand sep)",
+    "isDSLArray": "Array.isArray guard",
+    "isDSLFixedArray": "FixedArray type guard",
+    "isDSLValueTable": "ValueTable type guard",
+    "isDSLValueTableRow": "ValueTableRow type guard",
+    "isDSLColumns": "ValueTableColumns type guard",
+    "isDSLIndexes": "ValueTableIndexes type guard",
+    "isDSLStructure": "Structure type guard",
+    "isDSLMap": "Map type guard",
+    "isDSLFixedMap": "FixedMap type guard",
+    "isDSLUUID": "UniqueIdentifier type guard",
+    "isDSLType": "Type type guard"
+  },
+
+  "executionResultFields": [
+    "success: boolean",
+    "output: OutputEvent[]",
+    "result?: unknown",
+    "error?: { message: string; line?: number; column?: number; stack?: string }",
+    "diagnostics?: Diagnostic[]",
+    "timing?: { parse: number; compile: number; execute: number }",
+    "runtimeVersion: string"
+  ],
+
+  "capabilities": {
+    "server": {
+      "functions": 24,
+      "constructors": 10,
+      "includes": ["Запрос (SQLite)"]
+    },
+    "client": {
+      "functions": 24,
+      "constructors": 9,
+      "excludes": ["Запрос"]
+    }
+  }
+}

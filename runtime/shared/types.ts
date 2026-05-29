@@ -106,4 +106,4 @@ export interface DSRuntime {
  * старый кэш инвалидировался.
  * Формат: "major.minor"
  */
-export const RUNTIME_VERSION = "1.3";
+export const RUNTIME_VERSION = "1.3.3";
