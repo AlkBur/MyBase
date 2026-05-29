@@ -43,7 +43,7 @@ import type { DiagnosticsCollector } from "../runtime/shared/diagnostics";
  * variable: простой идентификатор
  * index: доступ по индексу (chain of [n])
  *
- * TODO(vNext): объединить с .property access в единый access graph.
+ * TODO(v1.4): объединить с .property access в единый access graph (member dispatch).
  */
 type AssignTarget =
   | { kind: "variable"; name: string }
@@ -145,6 +145,7 @@ function buildConstructorMap(caps: RuntimeCapabilities): Record<string, string> 
 //  Используется в parseExpression() для рекурсивного спуска по precedence
 // ======================================================================
 
+// DEBT(v1.5): И/ИЛИ in PRECEDENCE emit raw JS — no __dsl_and__/__dsl_or__ lowering yet
 const PRECEDENCE: Record<string, number> = {
   "ИЛИ": 1, "И": 2,
   "=": 3, "<>": 3, ">": 3, "<": 3, ">=": 3, "<=": 3,
@@ -386,10 +387,14 @@ class Compiler {
       const op = t.value;
       const right = this.parseExpression(prec + 1);
       // Преобразуем сравнение = в ===, <> в !==
+      // DEBT(v1.5): comparison engine still JS-native; needs __dsl_compare__
       if (op === "=") left = `${left} === ${right}`;
       else if (op === "<>") left = `${left} !== ${right}`;
       // Бинарный + идёт через __dsl_add__ для 1C-style string coercion
       else if (op === "+") left = `__dsl_add__(${left}, ${right})`;
+      // DEBT(v1.5): arithmetic operators (> < >= <=) still JS-native; needs __dsl_compare__
+      // DEBT(v1.5): logical И/ИЛИ emit raw JS И/ИЛИ which is NOT valid JS.
+      // Needs __dsl_and__ / __dsl_or__ with short-circuit eval.
       else left = `${left} ${op} ${right}`;
     }
     return left;
@@ -1095,6 +1100,7 @@ class Compiler {
               const last = bracketStack[bracketStack.length - 1]!;
               expr = `__dsl_index_set__(${last.obj}, ${last.idx}, ${value})`;
             } else if (lastProp !== null) {
+              // TRANSITION(v1.4): replace with __dsl_member_set__ after member_set migration
               // Dot-access присваивание: obj.prop = val → __dsl_index_set__(obj, "prop", val)
               // Нужно отделить объект от последнего свойства
               const lastDot = expr.lastIndexOf(".");

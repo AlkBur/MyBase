@@ -1,6 +1,8 @@
-Error: Функция "Собщить" не определена на строке 2
-Stack: Error: Функция "Собщить" не определена на строке 2
-    at parseStatements (D:\PROJECTS\MyBase\compiler\compile.ts:1024:23)
-    at compileProgram (D:\PROJECTS\MyBase\compiler\compile.ts:1137:10)
-    at execute (D:\PROJECTS\MyBase\runtime\server\runtime.ts:245:37)
-    at D:\PROJECTS\MyBase\tests\runner.ts:134:22
+Error: Ошибка при вызове метода контекста (Добавить)
+Stack: Error: Ошибка при вызове метода контекста (Добавить)
+    at value (D:\PROJECTS\MyBase\runtime\shared\objects\helpers.ts:32:30)
+    at anonymous (file:///D:/PROJECTS/MyBase/runtime/server/runtime.ts:4:49)
+    at execute (D:\PROJECTS\MyBase\runtime\server\runtime.ts:257:28)
+    at <anonymous> (D:\PROJECTS\MyBase\tests\invariants\member-access.invariant.ts:191:18)
+    at runInvariant (D:\PROJECTS\MyBase\tests\invariants\member-access.invariant.ts:30:5)
+    at D:\PROJECTS\MyBase\tests\invariants\member-access.invariant.ts:186

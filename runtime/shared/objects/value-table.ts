@@ -419,7 +419,7 @@ export function createValueTable(): any {
           const v = row.__values__[lower];
           if (typeof v === "number" && Number.isFinite(v)) {
             const current = resultRow.__values__[lower] as number || 0;
-            // Phase 2.3D: rowSet синхронизирует native property
+            // TRANSITION(v1.4): rowSet синхронизирует native property — remove after member_set
             rowSet(resultRow, lower, current + v);
           }
         }
@@ -463,7 +463,7 @@ export function createValueTable(): any {
             rowSet(newRow, col.Имя, row.__values__[colLower]);
           }
           if (sumLower.includes(colLower)) {
-            // Phase 2.3D: rowSet синхронизирует native property
+            // TRANSITION(v1.4): rowSet синхронизирует native property — remove after member_set
             rowSet(newRow, col.Имя, 0);
           }
         }
@@ -690,7 +690,7 @@ export function createValueTable(): any {
     for (const row of rows) {
       for (const lower of lowers) {
         row.__values__[lower] = value;
-        // Не синхронизируем native property — это transitional bridge
+        // TRANSITION(v1.4): remove after member_set migration — transitional bridge
       }
     }
   });
@@ -757,7 +757,7 @@ export function createValueTable(): any {
         const v = row.__values__[lower];
         // strict equality ===
         if (v === value) return row;
-        // Fallback to native property
+        // TRANSITION(v1.4): remove after member_set migration — native-property fallback
         if (v === undefined) {
           // Ищем оригинальное имя колонки для native fallback
           for (const col of columns.__items__) {

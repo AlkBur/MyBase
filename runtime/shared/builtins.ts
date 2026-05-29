@@ -339,8 +339,8 @@ export function createBuiltins(output: OutputEvent[]): BuiltinFactories {
      * Чтение: obj[index]. Dispatch-based — разные типы DSL-объектов
      * обрабатываются по-своему.
      *
-     * TODO(v2.0): заменить на централизованный __dsl_member_get__
-     * с prototype-chain hardening.
+     * TODO(v1.4): заменить на централизованный __dsl_member_get__
+     * с prototype-chain hardening (member dispatch migration).
      */
     __dsl_index__: (obj: any, index: any) => {
       if (obj == null) {
@@ -372,7 +372,7 @@ export function createBuiltins(output: OutputEvent[]): BuiltinFactories {
         const lower = colName.toLowerCase();
         const v = obj.__values__[lower];
         if (v !== undefined) return v;
-        // Fallback: dot-access мог записать значение как native property
+        // TRANSITION(v1.4): remove after member_set migration — native-property fallback
         const nativeVal = (obj as any)[colName];
         return nativeVal !== undefined ? nativeVal : undefined;
       }
@@ -430,13 +430,14 @@ export function createBuiltins(output: OutputEvent[]): BuiltinFactories {
       }
 
       // fallback: plain JS access
-      // TODO: prototype-chain traversal currently allowed.
-      // Hardened runtime will restrict to own-properties only.
+      // DEBT(v1.4): prototype-chain traversal currently allowed.
+      // member dispatch hardens to own-properties only.
       return obj[index];
     },
 
     /**
      * Запись: obj[index] = value. Dispatch-based.
+     * TRANSITION(v1.4): replace with __dsl_member_set__ after member_set migration
      *
      * Для DSL-объектов с readonly семантикой (индексы) выбрасывает ошибку.
      */
@@ -454,7 +455,7 @@ export function createBuiltins(output: OutputEvent[]): BuiltinFactories {
       if (isDSLValueTableRow(obj)) {
         const lower = String(index).toLowerCase();
         obj.__values__[lower] = value;
-        // Синхронизируем native property для dot-access консистентности
+        // TRANSITION(v1.4): remove after member_set migration — native-property sync
         (obj as any)[String(index)] = value;
         return;
       }

@@ -85,7 +85,6 @@ export function rowSet(row: any, key: string, value: unknown): void {
   }
   const lower = String(key).toLowerCase();
   row.__values__[lower] = value;
-  // Синхронизируем native property для dot-access консистентности
-  // (аналогично __dsl_index_set__ builtin, строка 507 builtins.ts)
+  // TRANSITION(v1.4): remove after member_set migration — native-property sync
   (row as any)[String(key)] = value;
 }
