@@ -43,7 +43,8 @@ import type { DiagnosticsCollector } from "../runtime/shared/diagnostics";
  * variable: простой идентификатор
  * index: доступ по индексу (chain of [n])
  *
- * TODO(v1.4): объединить с .property access в единый access graph (member dispatch).
+  * B.1.2: dot-read lowering → __dsl_member_get__ (в parseMethodChain).
+  * TODO(v1.4): bracket-read → member_get, write → member_set.
  */
 type AssignTarget =
   | { kind: "variable"; name: string }
@@ -442,7 +443,10 @@ class Compiler {
         const args = this.parseFunctionArgs();
         expr = `${expr}.${prop}(${args.join(", ")})`;
       } else {
-        expr = `${expr}.${prop}`;
+        // TRANSITION(v1.4): dot-read → __dsl_member_get__
+        // B.1.2: compile dot-read lowering to member_get (not native JS property)
+        // Method calls stay as .method(args) — only reads change.
+        expr = `__dsl_member_get__(${expr}, ${JSON.stringify(prop)})`;
       }
     }
     return expr;

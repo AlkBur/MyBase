@@ -1,4 +1,4 @@
 {
-  "js": "context.__variables__.set(\"Структура\", __dsl_newStructure__(\"Ключ1\", 10, \"Ключ2\", \"Привет\"));\ncontext.__variables__.set(\"a\", context.__variables__.get(\"Структура\").Ключ1);\ncontext.__variables__.set(\"b\", __dsl_index__(context.__variables__.get(\"Структура\"), \"Ключ2\"));\ncontext.__variables__.set(\"c\", __dsl_index__(context.__variables__.get(\"Структура\"), \"НесуществующийКлюч\"));",
+  "js": "context.__variables__.set(\"Структура\", __dsl_newStructure__(\"Ключ1\", 10, \"Ключ2\", \"Привет\"));\ncontext.__variables__.set(\"a\", __dsl_member_get__(context.__variables__.get(\"Структура\"), \"Ключ1\"));\ncontext.__variables__.set(\"b\", __dsl_index__(context.__variables__.get(\"Структура\"), \"Ключ2\"));\ncontext.__variables__.set(\"c\", __dsl_index__(context.__variables__.get(\"Структура\"), \"НесуществующийКлюч\"));",
   "lineMapHash": "sha256:73f95e4b52a5fcaa9fa953ad8b3e1c27d977725b4ccf97c9c1019a729261dc0a"
 }

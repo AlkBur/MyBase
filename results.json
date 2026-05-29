@@ -1,399 +1,85 @@
 {
-  "timestamp": "2026-05-29T12:42:30.373Z",
+  "timestamp": "2026-05-29T17:53:34.925Z",
   "bunVersion": "1.3.14",
   "runtimeVersion": "1.3.3",
   "results": [
     {
-      "name": "member-access.structure-dot",
-      "baselineKey": "member-access.structure-dot",
+      "name": "member-get.direct-js",
+      "baselineKey": "member-get.direct-js",
       "tags": [
         "dispatch",
-        "member-access",
-        "read-only"
+        "micro",
+        "member-get"
       ],
       "category": "dispatch",
-      "opsPerSec": 642982,
-      "medianNs": 1518,
-      "minNs": 1327,
-      "maxNs": 2621,
+      "opsPerSec": 36101083,
+      "medianNs": 27,
+      "minNs": 24,
+      "maxNs": 48,
       "samples": 30,
-      "status": "ok",
+      "status": "baseline-missing",
       "runtimeVersion": "1.3.3",
-      "bunVersion": "1.3.14",
-      "relativeToBaseline": 1.4
+      "bunVersion": "1.3.14"
     },
     {
-      "name": "member-access.structure-bracket",
-      "baselineKey": "member-access.structure-bracket",
+      "name": "member-get.plain-fallback",
+      "baselineKey": "member-get.plain-fallback",
       "tags": [
         "dispatch",
-        "member-access",
-        "read-only"
+        "micro",
+        "member-get"
       ],
       "category": "dispatch",
-      "opsPerSec": 459418,
-      "medianNs": 2135,
-      "minNs": 1776,
-      "maxNs": 3382,
+      "opsPerSec": 19411765,
+      "medianNs": 45,
+      "minNs": 24,
+      "maxNs": 300,
       "samples": 30,
-      "status": "ok",
+      "status": "baseline-missing",
       "runtimeVersion": "1.3.3",
-      "bunVersion": "1.3.14",
-      "relativeToBaseline": 26.7
+      "bunVersion": "1.3.14"
     },
     {
-      "name": "member-access.mixed-hot",
-      "baselineKey": "member-access.mixed-hot",
+      "name": "member-get.registered",
+      "baselineKey": "member-get.registered",
       "tags": [
         "dispatch",
-        "member-access",
-        "read-only"
+        "micro",
+        "member-get"
       ],
       "category": "dispatch",
-      "opsPerSec": 681818,
-      "medianNs": 1400,
-      "minNs": 1300,
-      "maxNs": 2400,
+      "opsPerSec": 17506631,
+      "medianNs": 55,
+      "minNs": 45,
+      "maxNs": 150,
       "samples": 30,
-      "status": "ok",
+      "status": "baseline-missing",
       "runtimeVersion": "1.3.3",
-      "bunVersion": "1.3.14",
-      "relativeToBaseline": 16.1
+      "bunVersion": "1.3.14"
     },
     {
-      "name": "row-access.warm",
-      "baselineKey": "row-access.warm",
+      "name": "member-get.registered-nullproto",
+      "baselineKey": "member-get.registered-nullproto",
       "tags": [
         "dispatch",
-        "row-access"
+        "micro",
+        "member-get"
       ],
       "category": "dispatch",
-      "opsPerSec": 443066,
-      "medianNs": 2180,
-      "minNs": 2080,
-      "maxNs": 3230,
+      "opsPerSec": 7147111,
+      "medianNs": 138,
+      "minNs": 110,
+      "maxNs": 265,
       "samples": 30,
-      "status": "regression-watch",
+      "status": "baseline-missing",
       "runtimeVersion": "1.3.3",
-      "bunVersion": "1.3.14",
-      "relativeToBaseline": -5.2
-    },
-    {
-      "name": "find-rows.linear-100",
-      "baselineKey": "find-rows.linear-100",
-      "tags": [
-        "collection",
-        "find-rows",
-        "linear"
-      ],
-      "category": "collection",
-      "params": {
-        "rows": 100
-      },
-      "opsPerSec": 60108,
-      "medianNs": 15400,
-      "minNs": 14900,
-      "maxNs": 43900,
-      "samples": 30,
-      "status": "regression-flag",
-      "runtimeVersion": "1.3.3",
-      "bunVersion": "1.3.14",
-      "relativeToBaseline": -15.9
-    },
-    {
-      "name": "table-iteration.10",
-      "baselineKey": "table-iteration.10",
-      "tags": [
-        "iteration",
-        "collection"
-      ],
-      "category": "iteration",
-      "params": {
-        "rows": 10
-      },
-      "opsPerSec": 87617,
-      "medianNs": 10600,
-      "minNs": 10400,
-      "maxNs": 18600,
-      "samples": 30,
-      "status": "ok",
-      "runtimeVersion": "1.3.3",
-      "bunVersion": "1.3.14",
-      "relativeToBaseline": 11.8
-    },
-    {
-      "name": "table-iteration.100",
-      "baselineKey": "table-iteration.100",
-      "tags": [
-        "iteration",
-        "collection"
-      ],
-      "category": "iteration",
-      "params": {
-        "rows": 100
-      },
-      "opsPerSec": 10628,
-      "medianNs": 91600,
-      "minNs": 88700,
-      "maxNs": 118100,
-      "samples": 30,
-      "status": "ok",
-      "runtimeVersion": "1.3.3",
-      "bunVersion": "1.3.14",
-      "relativeToBaseline": 7.3
-    },
-    {
-      "name": "table-iteration.1000",
-      "baselineKey": "table-iteration.1000",
-      "tags": [
-        "iteration",
-        "collection"
-      ],
-      "category": "iteration",
-      "params": {
-        "rows": 1000
-      },
-      "opsPerSec": 1104,
-      "medianNs": 877000,
-      "minNs": 870600,
-      "maxNs": 1488500,
-      "samples": 30,
-      "status": "ok",
-      "runtimeVersion": "1.3.3",
-      "bunVersion": "1.3.14",
-      "relativeToBaseline": 0.2
-    },
-    {
-      "name": "array-append.10",
-      "baselineKey": "array-append.10",
-      "tags": [
-        "collection",
-        "array",
-        "append"
-      ],
-      "category": "collection",
-      "params": {
-        "count": 10
-      },
-      "opsPerSec": 191816,
-      "medianNs": 5000,
-      "minNs": 4800,
-      "maxNs": 9400,
-      "samples": 30,
-      "status": "ok",
-      "runtimeVersion": "1.3.3",
-      "bunVersion": "1.3.14",
-      "relativeToBaseline": 74.8
-    },
-    {
-      "name": "array-append.100",
-      "baselineKey": "array-append.100",
-      "tags": [
-        "collection",
-        "array",
-        "append"
-      ],
-      "category": "collection",
-      "params": {
-        "count": 100
-      },
-      "opsPerSec": 27837,
-      "medianNs": 34800,
-      "minNs": 33500,
-      "maxNs": 47400,
-      "samples": 30,
-      "status": "regression-watch",
-      "runtimeVersion": "1.3.3",
-      "bunVersion": "1.3.14",
-      "relativeToBaseline": -11.9
-    },
-    {
-      "name": "structure-lookup.existing",
-      "baselineKey": "structure-lookup.existing",
-      "tags": [
-        "lookup",
-        "structure"
-      ],
-      "category": "lookup",
-      "opsPerSec": 418772,
-      "medianNs": 2219,
-      "minNs": 2043,
-      "maxNs": 3962,
-      "samples": 30,
-      "status": "regression-flag",
-      "runtimeVersion": "1.3.3",
-      "bunVersion": "1.3.14",
-      "relativeToBaseline": -21.3
-    },
-    {
-      "name": "structure-lookup.missing",
-      "baselineKey": "structure-lookup.missing",
-      "tags": [
-        "lookup",
-        "structure",
-        "slow-path"
-      ],
-      "category": "lookup",
-      "opsPerSec": 717703,
-      "medianNs": 1353,
-      "minNs": 1200,
-      "maxNs": 2013,
-      "samples": 30,
-      "status": "regression-flag",
-      "runtimeVersion": "1.3.3",
-      "bunVersion": "1.3.14",
-      "relativeToBaseline": -23.2
-    },
-    {
-      "name": "structure-lookup.many-keys",
-      "baselineKey": "structure-lookup.many-keys",
-      "tags": [
-        "lookup",
-        "structure"
-      ],
-      "category": "lookup",
-      "opsPerSec": 458482,
-      "medianNs": 2042,
-      "minNs": 1900,
-      "maxNs": 4767,
-      "samples": 30,
-      "status": "regression-flag",
-      "runtimeVersion": "1.3.3",
-      "bunVersion": "1.3.14",
-      "relativeToBaseline": -21.3
-    },
-    {
-      "name": "compilation.parse-lower",
-      "baselineKey": "compilation.parse-lower",
-      "tags": [
-        "compilation"
-      ],
-      "category": "compilation",
-      "opsPerSec": 2097,
-      "medianNs": 496200,
-      "minNs": 250400,
-      "maxNs": 1365700,
-      "samples": 30,
-      "status": "regression-flag",
-      "runtimeVersion": "1.3.3",
-      "bunVersion": "1.3.14",
-      "relativeToBaseline": -46
-    },
-    {
-      "name": "compilation.sandbox-build",
-      "baselineKey": "compilation.sandbox-build",
-      "tags": [
-        "compilation"
-      ],
-      "category": "compilation",
-      "opsPerSec": 87977,
-      "medianNs": 10100,
-      "minNs": 3900,
-      "maxNs": 29700,
-      "samples": 30,
-      "status": "regression-flag",
-      "runtimeVersion": "1.3.3",
-      "bunVersion": "1.3.14",
-      "relativeToBaseline": -47.6
-    },
-    {
-      "name": "compilation.runtime-cache-hit",
-      "baselineKey": "compilation.runtime-cache-hit",
-      "tags": [
-        "compilation"
-      ],
-      "category": "compilation",
-      "opsPerSec": 2941176,
-      "medianNs": 200,
-      "minNs": 200,
-      "maxNs": 3700,
-      "samples": 30,
-      "status": "regression-watch",
-      "runtimeVersion": "1.3.3",
-      "bunVersion": "1.3.14",
-      "relativeToBaseline": -14.7
-    },
-    {
-      "name": "native.structure-dot-dsl",
-      "baselineKey": "native.structure-dot-dsl",
-      "tags": [
-        "native",
-        "structure",
-        "dsl"
-      ],
-      "category": "dispatch",
-      "opsPerSec": 488599,
-      "medianNs": 2017,
-      "minNs": 1908,
-      "maxNs": 2775,
-      "samples": 30,
-      "status": "regression-flag",
-      "runtimeVersion": "1.3.3",
-      "bunVersion": "1.3.14",
-      "relativeToBaseline": -17.4
-    },
-    {
-      "name": "native.structure-dot-js",
-      "baselineKey": "native.structure-dot-js",
-      "tags": [
-        "native",
-        "structure",
-        "js"
-      ],
-      "category": "dispatch",
-      "opsPerSec": 29629630,
-      "medianNs": 31,
-      "minNs": 25,
-      "maxNs": 94,
-      "samples": 30,
-      "status": "regression-flag",
-      "runtimeVersion": "1.3.3",
-      "bunVersion": "1.3.14",
-      "relativeToBaseline": -34
-    },
-    {
-      "name": "native.array-bracket-dsl",
-      "baselineKey": "native.array-bracket-dsl",
-      "tags": [
-        "native",
-        "array",
-        "dsl"
-      ],
-      "category": "dispatch",
-      "opsPerSec": 62245,
-      "medianNs": 2036,
-      "minNs": 1891,
-      "maxNs": 418173,
-      "samples": 30,
-      "status": "regression-flag",
-      "runtimeVersion": "1.3.3",
-      "bunVersion": "1.3.14",
-      "relativeToBaseline": -90
-    },
-    {
-      "name": "native.array-bracket-js",
-      "baselineKey": "native.array-bracket-js",
-      "tags": [
-        "native",
-        "array",
-        "js"
-      ],
-      "category": "dispatch",
-      "opsPerSec": 826689,
-      "medianNs": 1196,
-      "minNs": 1136,
-      "maxNs": 1528,
-      "samples": 30,
-      "status": "regression-flag",
-      "runtimeVersion": "1.3.3",
-      "bunVersion": "1.3.14",
-      "relativeToBaseline": -42.1
+      "bunVersion": "1.3.14"
     }
   ],
   "summary": {
-    "ok": 7,
-    "regression-watch": 3,
-    "regression-flag": 10,
-    "baseline-missing": 0
+    "ok": 0,
+    "regression-watch": 0,
+    "regression-flag": 0,
+    "baseline-missing": 4
   }
 }
