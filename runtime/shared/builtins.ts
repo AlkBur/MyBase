@@ -39,6 +39,9 @@ import {
   isDSLType,
 } from "./objects";
 import { DSRuntimeError } from "./errors";
+import { DisplayContract, CoercionContract } from "./contract";
+const { coerceForDisplay, formatDslNumber } = DisplayContract;
+const { dslCoerceString } = CoercionContract;
 
 /** Интерфейс всех builtin-фабрик. Каждый метод — одна builtin-функция. */
 export type BuiltinFactories = {
@@ -81,70 +84,10 @@ export type BuiltinFactories = {
 /**
  * Создаёт объект со всеми builtin-функциями.
  * @param output — массив для записи сообщений (Сообщить)
- */
-/**
- * Детерминированное форматирование чисел для snapshot-стабильности.
- * - decimal separator: запятая (`,`)
- * - thousand separator: пробел (U+0020)
- * - группировка по 3 разряда
- * - дробная часть не группируется
  *
- * Почему не toLocaleString("ru-RU"):
- *   - ICU-зависимость (разные реализации Bun/Node дают разные символы)
- *   - snapshots становятся flaky
- *   - пробел (U+0020) вместо non-breaking space — детерминированно
+ * Coercion/display semantics delegated to contract.ts.
+ * builtins.ts stays a thin facade + dispatch layer.
  */
-function formatDslNumber(n: number): string {
-  // NaN, Infinity — без форматирования
-  if (!Number.isFinite(n)) return String(n);
-  const parts = String(n).split(".");
-  parts[0] = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, " ");
-  return parts.length > 1 ? `${parts[0]},${parts[1]}` : parts[0];
-}
-
-/**
- * Единая string coercion для отображения значений в Сообщить, СтрШаблон, Формат.
- * - undefined/null → ""
- * - boolean → "Да"/"Нет"
- * - number → formatDslNumber (decimal comma, thousand separators)
- * - остальное → String(value) (через toString для DSL-объектов)
- *
- * Отличается от dslCoerceString (__dsl_add__), которая сохраняет null/undefined
- * как "Null"/"Неопределено" — семантика конкатенации, а не отображения.
- */
-function coerceForDisplay(v: unknown): string {
-  if (v === undefined || v === null) return "";
-  if (v === true) return "Да";
-  if (v === false) return "Нет";
-  if (typeof v === "number") return formatDslNumber(v);
-  return String(v);
-}
-
-/**
- * 1C-style string coercion для бинарного +.
- * Отличается от toDslString (Сообщить):
- *   undefined → "Неопределено", а не ""
- *   null → "Null", а не ""
- *   true → "Истина", а не "Да"
- *   false → "Ложь", а не "Нет"
- *
- * Это семантика BSL выражения "" + x, а не Сообщить(x).
- */
-function dslCoerceString(v: unknown): string {
-  if (v === undefined) return "Неопределено";
-  if (v === null) return "Null";
-  if (v === true) return "Да";
-  if (v === false) return "Нет";
-  // Date → YYYYMMDD (platform-independent, timezone-safe)
-  if (v instanceof Date) {
-    const y = v.getFullYear();
-    const m = String(v.getMonth() + 1).padStart(2, "0");
-    const d = String(v.getDate()).padStart(2, "0");
-    return `${y}${m}${d}`;
-  }
-  return String(v);
-}
-
 export function createBuiltins(output: OutputEvent[]): BuiltinFactories {
   return {
     // ---- Вывод сообщений ----
