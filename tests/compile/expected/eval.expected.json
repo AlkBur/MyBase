@@ -1,0 +1,4 @@
+{
+  "js": "context.__variables__.set(\"a\", __dsl_eval__(\"1 + 2\", context));\ncontext.__variables__.set(\"b\", __dsl_eval__(\"'20240101'\", context));\ncontext.__variables__.set(\"c\", __dsl_eval__(\"Структура.К1\", context));",
+  "lineMapHash": "sha256:1a5d0b0b78d816167509d92891ac819a643f3e2e98733626c6738e30c765733a"
+}

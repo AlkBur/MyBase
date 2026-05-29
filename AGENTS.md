@@ -606,11 +606,33 @@ bun run test-update    # перезаписать expected из actual
 - [x] A.6: `DEBT(v1.5)` / `TRANSITION(v1.4)` markers across codebase
 
 **Phase B — Member dispatch (3 stages)**
-- [ ] B.0: Golden compile snapshots + ABI assertion test
+- [x] B.0: Golden compile snapshots + ABI assertion test
 - [ ] B.1: `__dsl_member_get__` — read-only dispatch, compile.ts dot/bracket → member_get
 - [ ] B.2: Stabilization — remove transitional fallbacks (native-property sync, НайтиСтроки, Свернуть)
 - [ ] B.3: `__dsl_member_set__` — write dispatch, compile.ts assignment → member_set
 - [ ] B.4: Remove `__dsl_index__` / `__dsl_index_set__` (replaced by member_get/member_set)
+
+**Phase D — Debug foundations** (после B.3, **до** C.1)
+
+Почему именно здесь:
+- После B.3 dispatch unified и ABI стабилен — debug hooks не цементируют unstable ABI
+- До C.1 (Symbol migration) объекты ещё читаемы — introspection бесплатен, Symbol-поля не требуют специнспекторов
+- Раньше нельзя: breakpoint API привязался бы к старому lowering, который ломается в B.1–B.3
+- Позже нельзя: после Symbol migration обычный inspection объектов усложняется
+
+> Architectural insight: unified member dispatch — prerequisite debugger'а.
+> debugger требует единых interception points (member_get, member_set, index, call).
+> Без этого tracing размазан, breakpoints inconsistent, watch expressions impossible.
+
+- [ ] D.0: Trace hooks — `RuntimeDebugHooks` { onStatement, onCall, onReturn, onError } в RuntimeContext. compile.ts генерирует `__dsl_debug_stmt__(line)` или `context.__debug?.onStatement?.({line})`. Почти zero overhead when disabled.
+- [ ] D.1: Statement map — compile-time `{ generatedOffset, sourceLine, sourceColumn }[]` для breakpoints + stack traces + IDE integration. Использует существующий lineMap.
+- [ ] D.2: Stack frames — `DSLStackFrame { functionName, sourceLine, locals }` + `context.__stack`. После C.2 (RuntimeContext). Даёт readable runtime errors, call stack, variable inspection.
+- [ ] D.3: Real debugger protocol — pause/resume, breakpoints, watch expressions, VSCode adapter, stepping. (v1.6 territory)
+
+**Что НЕ делать:**
+- AST interpreter debugger → второй runtime, убивает архитектуру
+- Proxy-based tracing → уничтожает perf на hot paths (row access, dispatch, collections)
+- Global mutable debug state → ломает parallel tests, nested eval, future workers. Только через RuntimeContext.debugHooks
 
 **Phase C — Hardening**
 - [ ] C.1: Symbol migration (`__dsl_type__` → Symbol, `__values__` → Symbol)
@@ -630,20 +652,14 @@ bun run test-update    # перезаписать expected из actual
 - [ ] Column-bound storage (identity-based, not name-based)
 - [ ] Real index engine (B-tree/hash, index-optimized НайтиСтроки)
 - [ ] Чистка: array/structure location (builtins vs objects/)
+- [ ] D.3 continuation: Real debugger protocol (breakpoints, VSCode adapter, stepping)
 
 **v2.0 — Инструментарий**
-- [ ] Source maps для отладки
 - [ ] Language Server Protocol
 - [ ] Профайлер
 - [ ] JSON ввод/вывод для AST
 - [ ] Client AST interpreter (без `eval`/`new Function`)
 - [ ] Вложенные процедуры/функции (замыкания)
-
-**v2.0 — Инструментарий**
-- [ ] Source maps для отладки
-- [ ] Language Server Protocol
-- [ ] Профайлер
-- [ ] JSON ввод/вывод для AST
 
 **v3.0 — Перспектива**
 - [ ] Инлайн-синтаксис запросов 1С

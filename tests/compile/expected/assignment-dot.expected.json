@@ -1,0 +1,4 @@
+{
+  "js": "context.__variables__.set(\"Структура\", __dsl_newStructure__(\"К1\", 1));\n__dsl_index_set__(context.__variables__.get(\"Структура\"), \"К1\", 42);\n__dsl_index_set__(context.__variables__.get(\"Структура\"), \"НовыйКлюч\", \"Значение\");\ncontext.__variables__.set(\"Т\", __dsl_newValueTable__());\ncontext.__variables__.get(\"Т\").Колонки.Добавить(\"К1\");\ncontext.__variables__.set(\"Стр\", context.__variables__.get(\"Т\").Добавить());\n__dsl_index_set__(context.__variables__.get(\"Стр\"), \"К1\", 100);",
+  "lineMapHash": "sha256:8409204b731e8195febb53de65eb2817f8cc97e46cf0f4708e6660fcb3511e02"
+}

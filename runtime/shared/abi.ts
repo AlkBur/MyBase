@@ -63,7 +63,7 @@ export interface DSLRuntimeABI_v1_3_3 {
  * Значения ABI для v1.3.3 (frozen snapshot).
  * Может использоваться для runtime-проверок совместимости.
  */
-export const ABI_CONSTANTS: DSLRuntimeABI_v1_3_3 = {
+export const ABI_CONSTANTS: DSLRuntimeABI_v1_3_3 = Object.freeze({
   version: "1.3.3",
 
   builtinKeys: [
@@ -141,4 +141,4 @@ export const ABI_CONSTANTS: DSLRuntimeABI_v1_3_3 = {
     expression: "Limited sandbox: no DB, no Query; no statements; return-wrapped; recursion guard (execDepthHard=500)",
     fragment: "Full sandbox: DB + Query; NO declarations; shared context with parent; recursion guard (execDepthHard=500)",
   },
-} as const;
+}) as const;
