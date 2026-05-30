@@ -341,6 +341,8 @@ interface RuntimeCapabilities {
 
 22. **ValueTableRow member access is authoritative through rowGet().** Native JS properties (`target[prop]`) are transitional only and must not become source-of-truth. dispatchMemberGet для Row делегирует rowGet() — единственный source of truth для lowercase lookup в `__values__`. После B.1.6 и B.2 все read-paths (member_get, __dsl_index__, НайтиСтроки) должны конвергировать в rowGet().
 
+23. **Bracket semantics are intentionally legacy until Phase D (B.1.6).** `Стр["Missing"]` → throw, `Стр.Missing` → undefined. Это architectural split, не баг. После Phase D оба пути должны конвергировать в единую семантику (1С: оба throw; JS-альтернатива: оба undefined). Decision — в design review D.1.
+
 ### Contract extraction pattern — `contract.ts`
 
 `runtime/shared/contract.ts` содержит **группированные объекты**, не плоские экспорты:
@@ -615,7 +617,7 @@ bun run test-update    # перезаписать expected из actual
 - [x] A.5: `DiagnosticsCollector` — compile-time only, all throw-sites instrumented
 - [x] A.6: `DEBT(v1.5)` / `TRANSITION(v1.4)` markers across codebase
 
-**Phase B — Member dispatch**
+**Phase B — Member dispatch (read-side)**
 - [x] B.0: Golden compile snapshots + ABI assertion test
 - [x] **B.1 — `__dsl_member_get__` builtin + read-side lowering** (B1.1 builtin+B1.2 compile.ts)
 - [x] B.1.3: Structure dispatch — register Structure handler in member-dispatch registry
@@ -634,17 +636,32 @@ bun run test-update    # перезаписать expected из actual
   - Perf interpretation: `member-access.*` stable + `row-access.*` regressed → row lookup issue
   - Perf interpretation: `member-get.registered` regressed → dispatch/runtime issue
   - Perf interpretation: both regressed → registry polymorphism / branch growth
-- [ ] B.1.5: Polymorphic unifying dispatch — registry-based polymorphic dispatch
-- [ ] B.1.6: Remove transitional read fallbacks — stabilization after all read handlers registered
-- [ ] B.2: Stabilization — remove transitional fallbacks (native-property sync, НайтиСтроки, Свернуть)
-- [ ] B.3: `__dsl_member_set__` — write dispatch, compile.ts assignment → member_set
-- [ ] B.4: Remove `__dsl_index__` / `__dsl_index_set__` (replaced by member_get/member_set)
+- [ ] B.1.5: Polymorphic unifying dispatch (deferred — need regression signal first)
 
-**Phase D — Debug foundations** (после B.3, **до** C.1)
+**Phase C — Cleanup/Polish** (стабилизация перед B.1.6)
+- [ ] C.1: `isDSLPicture` — add type guard in helpers.ts (сейчас inline guard в builtins.ts)
+- [ ] C.2: `docs/design/value-list-notes.md` — BSL-отличия СписокЗначений (0-based, identity delete, stable sort, Date в НайтиПоЗначению)
+- [ ] C.3: Dispatch docs freeze — topology table в object-model.md + AGENTS.md
+- [ ] C.4: B1.6 design doc — matrix: row.Prop vs row["Prop"], struct.Prop vs struct["Prop"]
+
+**Phase D — B.1.6 Read-path stabilization** (унификация dot/bracket semantics)
+- [ ] D.1: B1.6 design review — matrix decision (unify к throw или к undefined?)
+- [ ] D.2: Structure bracket-read → bridge через member_get dispatch
+- [ ] D.3: Row bracket-read → bridge через member_get dispatch
+- [ ] D.4: Убрать explicit Structure/Row dispatch из `__dsl_index__` в builtins.ts
+- [ ] D.5: Восстановить compile invariant dot == bracket equivalence
+- [ ] D.6: Golden test update (bracket-read coherence)
+
+**Phase E — Write-path + stabilization**
+- [ ] E.1 (B.2): Stabilization — remove transitional fallbacks (native-property sync, НайтиСтроки, Свернуть)
+- [ ] E.2 (B.3): `__dsl_member_set__` — write dispatch, compile.ts assignment → member_set
+- [ ] E.3 (B.4): Remove `__dsl_index__` / `__dsl_index_set__` (replaced by member_get/member_set)
+
+**Phase F — Debug foundations** (после E.3/B.3, **до** Phase G)
 
 Почему именно здесь:
 - После B.3 dispatch unified и ABI стабилен — debug hooks не цементируют unstable ABI
-- До C.1 (Symbol migration) объекты ещё читаемы — introspection бесплатен, Symbol-поля не требуют специнспекторов
+- До G.1 (Symbol migration) объекты ещё читаемы — introspection бесплатен, Symbol-поля не требуют специнспекторов
 - Раньше нельзя: breakpoint API привязался бы к старому lowering, который ломается в B.1–B.3
 - Позже нельзя: после Symbol migration обычный inspection объектов усложняется
 
@@ -652,22 +669,22 @@ bun run test-update    # перезаписать expected из actual
 > debugger требует единых interception points (member_get, member_set, index, call).
 > Без этого tracing размазан, breakpoints inconsistent, watch expressions impossible.
 
-- [ ] D.0: Trace hooks — `RuntimeDebugHooks` { onStatement, onCall, onReturn, onError } в RuntimeContext. compile.ts генерирует `__dsl_debug_stmt__(line)` или `context.__debug?.onStatement?.({line})`. Почти zero overhead when disabled.
-- [ ] D.1: Statement map — compile-time `{ generatedOffset, sourceLine, sourceColumn }[]` для breakpoints + stack traces + IDE integration. Использует существующий lineMap.
-- [ ] D.2: Stack frames — `DSLStackFrame { functionName, sourceLine, locals }` + `context.__stack`. После C.2 (RuntimeContext). Даёт readable runtime errors, call stack, variable inspection.
-- [ ] D.3: Real debugger protocol — pause/resume, breakpoints, watch expressions, VSCode adapter, stepping. (v1.6 territory)
+- [ ] F.0: Trace hooks — `RuntimeDebugHooks` { onStatement, onCall, onReturn, onError } в RuntimeContext. compile.ts генерирует `__dsl_debug_stmt__(line)` или `context.__debug?.onStatement?.({line})`. Почти zero overhead when disabled.
+- [ ] F.1: Statement map — compile-time `{ generatedOffset, sourceLine, sourceColumn }[]` для breakpoints + stack traces + IDE integration. Использует существующий lineMap.
+- [ ] F.2: Stack frames — `DSLStackFrame { functionName, sourceLine, locals }` + `context.__stack`. После G.2 (RuntimeContext). Даёт readable runtime errors, call stack, variable inspection.
+- [ ] F.3: Real debugger protocol — pause/resume, breakpoints, watch expressions, VSCode adapter, stepping. (v1.6 territory)
 
 **Что НЕ делать:**
 - AST interpreter debugger → второй runtime, убивает архитектуру
 - Proxy-based tracing → уничтожает perf на hot paths (row access, dispatch, collections)
 - Global mutable debug state → ломает parallel tests, nested eval, future workers. Только через RuntimeContext.debugHooks
 
-**Phase C — Hardening**
-- [ ] C.1: Symbol migration (`__dsl_type__` → Symbol, `__values__` → Symbol)
-- [ ] C.2: `RuntimeContext` — formalize context object interface
-- [ ] C.3: RFC-0001 — document member dispatch architecture
-- [ ] C.4: Docs update (object-model.md, runtime-semantics.md)
-- [ ] C.5: v1.4.0 tag
+**Phase G — Hardening**
+- [ ] G.1: Symbol migration (`__dsl_type__` → Symbol, `__values__` → Symbol)
+- [ ] G.2: `RuntimeContext` — formalize context object interface
+- [ ] G.3: RFC-0001 — document member dispatch architecture
+- [ ] G.4: Docs update (object-model.md, runtime-semantics.md)
+- [ ] G.5: v1.4.0 tag
 
 **v1.5 — Comparison engine + object model hardening (deferred)**
 - [ ] Comparison engine (`__dsl_compare__` — replaces `===`, `>`, `<`, `>=`, `<=`)
@@ -680,7 +697,7 @@ bun run test-update    # перезаписать expected из actual
 - [ ] Column-bound storage (identity-based, not name-based)
 - [ ] Real index engine (B-tree/hash, index-optimized НайтиСтроки)
 - [ ] Чистка: array/structure location (builtins vs objects/)
-- [ ] D.3 continuation: Real debugger protocol (breakpoints, VSCode adapter, stepping)
+- [ ] F.3 continuation: Real debugger protocol (breakpoints, VSCode adapter, stepping)
 
 **v2.0 — Инструментарий**
 - [ ] Language Server Protocol

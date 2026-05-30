@@ -1,0 +1,5 @@
+Error: Неожиданный токен "?" на строке 1
+Stack: Error: Неожиданный токен "?" на строке 1
+    at parseStatements (D:\PROJECTS\MyBase\compiler\compile.ts:1163:17)
+    at compileProgram (D:\PROJECTS\MyBase\compiler\compile.ts:1197:10)
+    at execute (D:\PROJECTS\MyBase\runtime\server\runtime.ts:250:37)

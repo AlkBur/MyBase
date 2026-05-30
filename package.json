@@ -5,6 +5,7 @@
     "scripts": {
     "start": "D:\\PROJECTS\\bun\\bin\\bun-windows-x64\\bun.exe run index.ts",
     "dev": "D:\\PROJECTS\\bun\\bin\\bun-windows-x64\\bun.exe --watch run index.ts",
+    "web": "bun run server/web.ts",
     "build": "D:\\PROJECTS\\bun\\bin\\bun-windows-x64\\bun.exe build ./index.ts --compile --outfile app",
     "clean": "powershell -Command \"Remove-Item -Force app.exe, data.db -ErrorAction SilentlyContinue\"",
     "reset": "bun run clean && bun run start",
