@@ -31,6 +31,460 @@
 - **Client runtime:** безопасный интерпретатор AST — без генерации JS, без `eval` (stub)
 - **Capabilities:** каждый runtime сам определяет доступные функции/конструкторы/объекты
 
+---
+
+# Product Roadmap & Architecture Freeze (Release 0.1)
+
+## Roadmap Separation
+
+Документ содержит два независимых дорожных карты (roadmap):
+
+### Product Roadmap
+
+Определяет порядок поставки пользовательских возможностей:
+
+```
+Release 0.1
+  ├── Playground
+  ├── Storage
+  ├── Examples
+  └── Forms
+```
+
+### Runtime Roadmap
+
+Определяет эволюцию DSL runtime:
+
+```
+v1.4 (Member dispatch, Hardening)
+v1.5 (Comparison engine, Object model)
+v2.0 (LSP, Profiler, Client runtime)
+```
+
+Product Roadmap имеет приоритет над Runtime Roadmap до завершения Release 0.1.
+Новые runtime-возможности не должны откладывать поставку Release 0.1.
+
+---
+
+## CORE FREEZE (Release 0.1)
+
+До завершения Release 0.1 запрещается:
+
+- добавлять новые конструкции языка;
+- добавлять новые builtin-функции;
+- добавлять новые DSL-объекты;
+- менять семантику существующих операторов;
+- менять ABI runtime;
+- менять object model.
+
+Разрешено только:
+
+- исправление багов (bugfix);
+- стабилизация тестов;
+- рефакторинг без изменения поведения;
+- web playground (Phase A);
+- storage layer (Phase B);
+- examples (Phase C).
+
+### Rationale
+
+Основной риск проекта — отсутствие пользовательского интерфейса для проверки языка.
+Каждая новая возможность ядра увеличивает стоимость будущего UI и форм.
+Поэтому следующая цель — не расширение языка, а доставка среды выполнения.
+
+---
+
+## Architectural Decisions (Adopted)
+
+| Decision | Status |
+|----------|--------|
+| Execute API `{ code, context?, target? }` | Adopted |
+| FormSession introduced before Forms | Adopted |
+| Layout is tree-based (`root.children`) | Adopted |
+| Full JSON refresh in Alpha | Adopted |
+| 1C control names in JSON (`ПолеВвода`, `Кнопка`) | Adopted |
+| Server-driven UI | Adopted |
+| ClientRuntime deferred | Adopted |
+| Reserved event names | Adopted |
+| Core Freeze until Release 0.1 | Adopted |
+| Forms source-of-truth = filesystem | Adopted |
+| SQLite forms storage = deployment artifact | Adopted |
+| Page structure = layout.json + module.bsl + meta.json | Adopted |
+| Manifest-based page discovery | Adopted |
+| Forms rebuildable from filesystem | Adopted |
+| Forms describe semantics, not CSS | Adopted |
+| Styling is theme-driven | Adopted |
+| Themes define visual appearance of controls | Adopted |
+| Controls support semantic variants | Adopted |
+| CSS classes are renderer concern | Adopted |
+| `layout.json` must not contain `class` or `style` fields | Adopted |
+| Form definitions are renderer-agnostic | Adopted |
+| FormSession is transport-agnostic | Adopted |
+| HTTP is default transport for Release 0.1 | Adopted |
+| WebSocket transport is deferred until post-Release 0.1 | Adopted |
+
+---
+
+## EXECUTE API FREEZE
+
+Фиксируется будущий контракт выполнения.
+
+```ts
+type ExecuteRequest = {
+  code: string;
+  context?: unknown;
+  target?: "server" | "client";
+};
+
+type ExecuteResponse = {
+  success: boolean;
+  output: OutputEvent[];
+  diagnostics?: Diagnostic[];
+
+  error?: {
+    message: string;
+    line?: number;
+  };
+
+  timing?: {
+    parse: number;
+    compile: number;
+    execute: number;
+  };
+
+  runtimeVersion: string;
+};
+```
+
+### Rationale
+
+Даже если Forms появятся позже, Execute API уже готов принимать:
+- context;
+- target;
+- form execution context.
+
+Без последующих breaking changes.
+
+---
+
+## FORM SESSION FREEZE
+
+Формы ещё не реализованы, но структура резервируется заранее.
+
+```ts
+type FormSession = {
+  id: string;
+  formName: string;
+
+  state: Record<string, unknown>;
+
+  runtime: {
+    context: unknown;
+  };
+};
+```
+
+### Rationale
+
+Даже если Forms Alpha начнётся через несколько месяцев, серверная архитектура уже будет совместима.
+
+---
+
+## UI MODEL FREEZE
+
+Формы используют древовидную модель контейнеров.
+
+Не допускается плоский список элементов.
+
+Правильная структура:
+
+```ts
+{
+  root: {
+    type: "VerticalGroup",
+    children: [
+      {
+        type: "ПолеВвода"
+      },
+      {
+        type: "Кнопка"
+      }
+    ]
+  }
+}
+```
+
+### Rationale
+
+Позволяет без миграции добавить:
+- группы;
+- панели;
+- вкладки;
+- split containers;
+- динамические layouts.
+
+---
+
+## EVENT NAMES RESERVED
+
+Имена событий фиксируются заранее.
+
+```text
+ПриСозданииНаСервере
+ПриОткрытии
+ПриЗакрытии
+ПриИзменении
+ПриНажатии
+```
+
+Реализация откладывается до Forms Alpha.
+
+---
+
+## SERVER-DRIVEN UI
+
+До отдельного решения запрещён ClientRuntime.
+
+Все действия выполняются через сервер.
+
+```text
+Browser
+  ↓ action
+Server
+  ↓ execute
+FormSession
+  ↓
+JSON Layout
+```
+
+Клиент только отображает состояние.
+
+### Rationale
+
+- Минимальный объём кода.
+- Минимальная поверхность ошибок.
+- Максимальная совместимость с будущими формами.
+
+---
+
+## LAYOUT UPDATE STRATEGY
+
+Release 0.1 и Forms Alpha используют полную пересылку состояния.
+
+```text
+Action
+ ↓
+Execute
+ ↓
+Full JSON Layout
+ ↓
+Render
+```
+
+Diff-патчи запрещены.
+
+### Rationale
+
+- Проще отладка.
+- Меньше кода.
+- Нет необходимости проектировать patch protocol.
+
+Оптимизация откладывается до Forms Polish.
+
+---
+
+## FORMS STORAGE CONTRACT (Phase D Reserved)
+
+Source of Truth для форм — файловая система.
+
+**Структура:**
+
+```
+/pages
+  manifest.json
+
+  /main
+    layout.json
+    module.bsl
+    meta.json
+
+  /users
+    layout.json
+    module.bsl
+    meta.json
+```
+
+- `layout.json` — дерево UI-компонентов (`root.children`)
+- `module.bsl` — код обработчиков формы
+- `meta.json` — служебные метаданные публикации
+- `manifest.json` — обнаружение страниц на этапе сборки
+
+**Build pipeline:**
+
+```
+pages/*
+    ↓
+build-pages
+    ↓
+SQLite (forms)
+```
+
+SQLite является **deployment storage**, но не source-of-truth.
+
+**Таблица `forms`:**
+- `id`, `title`, `layout_json`, `module_code`, `version`, `hash`, `updated_at`
+
+**Архитектурные инварианты:**
+1. Формы редактируются только в файловой системе.
+2. SQLite может быть полностью пересоздан из `/pages/`.
+3. `layout.json`, `module.bsl` и `meta.json` всегда импортируются как единая сущность.
+4. `manifest.json` — единственный механизм обнаружения страниц.
+5. Browser никогда не читает layout напрямую из файловой системы.
+6. UI получает форму только через FormSession и server-driven JSON.
+7. До Release 0.1 запрещено расширять контракт форм без обновления AGENTS.md.
+8. Hash формы детерминированно вычисляется из `layout.json`, `module.bsl` и `meta.json`.
+
+---
+
+# Delivery Roadmap
+
+## Phase A — Web Playground
+
+**Срок:** 1–2 недели.
+
+**Состав:**
+
+- Bun HTTP server;
+- Monaco Editor;
+- Execute button;
+- Ctrl+Enter;
+- Output panel;
+- Diagnostics panel;
+- Error panel;
+- localStorage autosave.
+
+**Файлы:**
+
+```text
+server/web.ts
+public/index.html
+package.json
+```
+
+**Критерий завершения:**
+
+```text
+bun run web
+↓
+http://localhost:3000
+↓
+редактор
+↓
+Ctrl+Enter
+↓
+результат выполнения
+```
+
+---
+
+## Phase B — Storage
+
+**Срок:** ~1 неделя.
+
+SQLite:
+
+```text
+scripts
+  id
+  name
+  code
+  createdAt
+  updatedAt
+```
+
+**Функции:**
+
+- сохранить;
+- загрузить;
+- удалить;
+- список скриптов.
+
+---
+
+## Phase C — Examples
+
+**Срок:** ~1 неделя.
+
+**Добавить:**
+
+- встроенные примеры;
+- измерение времени выполнения;
+- экспорт .os.
+
+После завершения:
+
+```text
+Release 0.1
+```
+
+---
+
+## Phase D — Forms Alpha
+
+**Минимальная реализация:**
+
+```bsl
+ОткрытьФорму("Тест");
+```
+
+**Поддержка:**
+
+- FormSession;
+- серверные события;
+- JSON layout.
+
+Без контейнеров высокого уровня.
+
+---
+
+## Phase E — Forms Polish
+
+**Добавить:**
+
+- группы;
+- вкладки;
+- навигацию;
+- layout containers;
+- diff protocol.
+
+---
+
+## Phase F — Client Runtime
+
+Разрешено только после подтверждённой необходимости.
+
+До этого момента:
+
+```text
+ClientRuntime = stub
+```
+
+Архитектурное решение не пересматривается без отдельного RFC.
+
+---
+
+## Current Focus
+
+Текущая активная задача проекта:
+
+```text
+Phase A — Web Playground
+```
+
+Все остальные направления считаются замороженными до завершения Release 0.1.
+
+---
+
 ### Команды
 
 ```bash
