@@ -434,7 +434,60 @@ Release 0.1
 
 ---
 
-## Phase D — Forms Alpha
+## Playground Editor State Model (Phase C Stabilization)
+
+### Editor modes
+
+```ts
+type EditorSource =
+  | { kind: "script"; id: string }     // существующий сценарий
+  | { kind: "example"; name: string }  // встроенный пример
+  | null;                               // новый несозданный
+```
+
+### State variables
+
+| Variable | Role | Used for |
+|----------|------|----------|
+| `currentId` | script UUID | `.active` class in sidebar, save target |
+| `currentExample` | example filename | `source-label`, save-as flow |
+| `lastScriptName` | display-only | "последний сценарий" in context bar |
+
+### Rendering strategy (DOM-preserving)
+
+```text
+renderScriptList()    — полная перестройка (структура изменилась)
+updateActiveItem()    — только toggle класса (выделение изменилось)
+```
+
+- `renderScriptList()` only when data came from server (load, create, delete, rename)
+- `updateActiveItem()` when only selection changed (open script, load example)
+- `source-label` in toolbar shows `📖 example.os (пример) / Сценарий: lastName`
+- Scroll position preserved via `scrollTop` save/restore
+
+### Forms rendering decision (Phase D)
+
+Playground uses vanilla JS (no framework) — sufficient for Phase A–C.
+
+**Forms Phase D will use Lit** for server-driven UI rendering:
+
+```text
+FormSession
+    ↓
+JSON Layout
+    ↓
+Lit Renderer
+    ↓
+DOM Diff (automatic)
+```
+
+Rationale:
+- No custom virtual DOM engine needed
+- Lit diff preserves focus, scroll, input state
+- Server-driven full JSON refresh → Lit handles incremental DOM update
+- Aligns with architectural decisions (server-driven UI, transport-agnostic FormSession)
+
+---
 
 **Минимальная реализация:**
 
