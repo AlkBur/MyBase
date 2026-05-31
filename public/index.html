@@ -136,7 +136,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',system-ui,sans-seri
   function updateSaveButton() {
     if (!isScript()) {
       saveBtn.textContent = 'Сохранить как...';
-      saveBtn.disabled = false;
+      saveBtn.disabled = !dirty;
     } else {
       saveBtn.textContent = 'Сохранить';
       saveBtn.disabled = !dirty;
@@ -206,8 +206,8 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',system-ui,sans-seri
   function updateActiveItem() {
     var items = scriptList.querySelectorAll('.script-item');
     for (var i = 0; i < items.length; i++) {
-      var id = Number(items[i].dataset.id || 0);
-      items[i].classList.toggle('active', id === currentId);
+      var id = items[i].dataset.id;
+      items[i].classList.toggle('active', id === String(currentId));
     }
   }
 
