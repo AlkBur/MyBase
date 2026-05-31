@@ -180,6 +180,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',system-ui,sans-seri
   }
 
   function renderScriptList() {
+    var scrollPos = scriptList.scrollTop;
     scriptList.innerHTML = '';
     if (scriptsCache.length === 0) {
       scriptList.innerHTML = '<div style="padding:12px;color:#6a6a6a;font-size:12px">Нет сценариев</div>';
@@ -198,6 +199,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',system-ui,sans-seri
       div.addEventListener('click', function() { openScript(s.id); });
       scriptList.appendChild(div);
     });
+    scriptList.scrollTop = scrollPos;
   }
 
   function openScript(id) {
