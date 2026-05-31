@@ -196,10 +196,19 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',system-ui,sans-seri
       dateEl.textContent = formatDate(s.updated_at);
       div.appendChild(nameEl);
       div.appendChild(dateEl);
+      div.dataset.id = String(s.id);
       div.addEventListener('click', function() { openScript(s.id); });
       scriptList.appendChild(div);
     });
     scriptList.scrollTop = scrollPos;
+  }
+
+  function updateActiveItem() {
+    var items = scriptList.querySelectorAll('.script-item');
+    for (var i = 0; i < items.length; i++) {
+      var id = Number(items[i].dataset.id || 0);
+      items[i].classList.toggle('active', id === currentId);
+    }
   }
 
   function openScript(id) {
@@ -216,7 +225,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',system-ui,sans-seri
         editor.setValue(s.source || '');
         suppressDirty = false;
         setDirty(false);
-        renderScriptList();
+        updateActiveItem();
         updateSourceLabel();
         return s;
       })
@@ -242,8 +251,8 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',system-ui,sans-seri
           currentExample = null;
           setDirty(false);
           updateSourceLabel();
-          renderScriptList();
           updateSaveButton();
+          loadScriptList();
         })
         .catch(function() { saveBtn.textContent = 'Ошибка'; });
       return;
@@ -338,7 +347,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',system-ui,sans-seri
         editor.setValue(code);
         suppressDirty = false;
         setDirty(false);
-        renderScriptList();
+        updateActiveItem();
         updateSourceLabel();
       })
       .catch(function(err) {
