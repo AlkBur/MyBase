@@ -13,6 +13,11 @@
 
 import { defineMethod, defineDSLType } from "./helpers";
 
+export type ColumnDef = {
+  Имя: string;
+  __typeDescription__?: any;
+};
+
 const COLUMN_NAME_RE = /^[\p{L}_][\p{L}\p{N}_]*$/u;
 
 /** Имена методов коллекции Колонки — нельзя использовать как имена колонок */

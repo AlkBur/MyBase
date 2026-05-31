@@ -35,9 +35,9 @@
 function formatDslNumber(n: number): string {
   // NaN, Infinity — без форматирования
   if (!Number.isFinite(n)) return String(n);
-  const parts = String(n).split(".");
-  parts[0] = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, " ");
-  return parts.length > 1 ? `${parts[0]},${parts[1]}` : parts[0];
+  const [integerPart = "", fractionPart] = String(n).split(".");
+  const groupedInteger = integerPart.replace(/\B(?=(\d{3})+(?!\d))/g, " ");
+  return fractionPart !== undefined ? `${groupedInteger},${fractionPart}` : groupedInteger;
 }
 
 /**

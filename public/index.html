@@ -10,21 +10,36 @@ html,body{height:100%;overflow:hidden}
 body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',system-ui,sans-serif;background:#1e1e1e;color:#d4d4d4;display:flex;flex-direction:column}
 #toolbar{display:flex;align-items:center;gap:8px;padding:6px 16px;background:#252526;border-bottom:1px solid #3c3c3c;flex-shrink:0}
 #toolbar h1{font-size:14px;font-weight:600;color:#ccc;flex:1}
-#run-btn{background:#0e639c;color:#fff;border:none;padding:6px 20px;border-radius:3px;cursor:pointer;font-size:13px;white-space:nowrap}
-#run-btn:hover{background:#1177bb}
-#run-btn:active{background:#0e5590}
+#toolbar button{background:#0e639c;color:#fff;border:none;padding:6px 14px;border-radius:3px;cursor:pointer;font-size:13px;white-space:nowrap}
+#toolbar button:hover{background:#1177bb}
+#toolbar button:active{background:#0e5590}
+#toolbar .secondary{background:#3c3c3c}
+#toolbar .secondary:hover{background:#4c4c4c}
+#toolbar .danger{background:#6b3030}
+#toolbar .danger:hover{background:#8b4040}
+#toolbar .success{background:#2d6b30}
+#toolbar .success:hover{background:#3d8b40}
+#timer{color:#6a6a6a;font-size:11px;margin-left:auto;min-width:120px;text-align:right}
+#dirty-indicator{color:#d7ba7d;font-size:12px;min-width:90px;text-align:right}
+#main{display:flex;flex:1;min-height:0}
+#sidebar{width:220px;flex-shrink:0;background:#252526;border-right:1px solid #3c3c3c;display:flex;flex-direction:column}
+#sidebar-header{padding:8px 12px;font-size:11px;color:#888;text-transform:uppercase;letter-spacing:0.5px;border-bottom:1px solid #3c3c3c;flex-shrink:0}
+#script-list{flex:1;overflow-y:auto;padding:4px 0}
+.script-item{padding:6px 12px;cursor:pointer;font-size:13px;color:#ccc;border-left:3px solid transparent}
+.script-item:hover{background:#2d2d2d}
+.script-item.active{background:#37373d;border-left-color:#0e639c;color:#fff}
+.script-item .date{font-size:11px;color:#6a6a6a;margin-top:1px}
+#workspace{flex:1;display:flex;flex-direction:column;min-width:0}
 #editor-container{flex:1;min-height:0}
-#output-container{flex-shrink:0;height:30%;min-height:120px;display:flex;flex-direction:column;background:#1e1e1e;border-top:1px solid #3c3c3c}
-#output-header{display:flex;align-items:center;padding:3px 16px;font-size:12px;background:#252526;color:#888;border-bottom:1px solid #3c3c3c;flex-shrink:0}
+#output-container{flex-shrink:0;height:28%;min-height:100px;display:flex;flex-direction:column;background:#1e1e1e;border-top:1px solid #3c3c3c}
+#output-header{display:flex;align-items:center;padding:2px 12px;font-size:11px;background:#252526;color:#888;border-bottom:1px solid #3c3c3c;flex-shrink:0}
 #output-header span{flex:1}
-#output-body{flex:1;overflow-y:auto;padding:8px 16px;font-family:'Consolas','Courier New',monospace;font-size:13px;line-height:1.5;white-space:pre-wrap;min-height:0}
+#output-body{flex:1;overflow-y:auto;padding:6px 12px;font-family:'Consolas','Courier New',monospace;font-size:13px;line-height:1.5;white-space:pre-wrap;min-height:0}
 .output-line{color:#d4d4d4}
-.error-line{color:#f48771}
-.diag-error{color:#f48771;background:#3a1d1d33;border-left:3px solid #f48771;padding:2px 8px;margin:2px 0}
-.diag-warning{color:#cca700;background:#3a3a1d33;border-left:3px solid #cca700;padding:2px 8px;margin:2px 0}
-.diag-info{color:#75beff;background:#1d3a4a33;border-left:3px solid #75beff;padding:2px 8px;margin:2px 0}
-#error-panel{display:none;padding:8px 16px;background:#3a1d1d;color:#f48771;font-family:'Consolas','Courier New',monospace;font-size:13px;white-space:pre-wrap;border-bottom:1px solid #5a2d2d;flex-shrink:0}
-#timer{color:#6a6a6a;font-size:11px;margin-left:auto}
+.diag-error{color:#f48771;background:#3a1d1d33;border-left:3px solid #f48771;padding:2px 6px;margin:1px 0}
+.diag-warning{color:#cca700;background:#3a3a1d33;border-left:3px solid #cca700;padding:2px 6px;margin:1px 0}
+.diag-info{color:#75beff;background:#1d3a4a33;border-left:3px solid #75beff;padding:2px 6px;margin:1px 0}
+#error-panel{display:none;padding:6px 12px;background:#3a1d1d;color:#f48771;font-family:'Consolas','Courier New',monospace;font-size:13px;white-space:pre-wrap;border-bottom:1px solid #5a2d2d;flex-shrink:0}
 .output-empty{color:#6a6a6a;font-style:italic}
 </style>
 </head>
@@ -32,19 +47,26 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',system-ui,sans-seri
 
 <div id="toolbar">
   <h1>DSL Playground</h1>
+  <button class="success" id="new-btn">+ Новый</button>
+  <button id="save-btn">Сохранить</button>
+  <button class="danger" id="delete-btn">Удалить</button>
+  <span id="dirty-indicator"></span>
   <span id="timer"></span>
   <button id="run-btn">Выполнить</button>
 </div>
 
-<div id="editor-container"></div>
-
-<div id="output-container">
-  <div id="error-panel"></div>
-  <div id="output-header">
-    <span>Вывод</span>
+<div id="main">
+  <div id="sidebar">
+    <div id="sidebar-header">Сценарии</div>
+    <div id="script-list"></div>
   </div>
-  <div id="output-body">
-    <div class="output-empty">Нажмите «Выполнить» для запуска кода</div>
+  <div id="workspace">
+    <div id="editor-container"></div>
+    <div id="output-container">
+      <div id="error-panel"></div>
+      <div id="output-header"><span>Вывод</span></div>
+      <div id="output-body"><div class="output-empty">Нажмите «Выполнить» для запуска кода</div></div>
+    </div>
   </div>
 </div>
 
@@ -52,12 +74,10 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',system-ui,sans-seri
 </script>
 <script>
 (function() {
-  // ---- Constants ----
-  var LS_KEY = 'dsl:last-code';
-  var API_URL = '/api/v1/execute';
+  var API_SCRIPTS = '/api/v1/scripts';
+  var API_EXEC = '/api/v1/execute';
 
-  // ---- Starter example ----
-  var STARTER_CODE = 
+  var STARTER_CODE =
     'Сообщить("Привет мир");\n' +
     '\n' +
     'Массив = Новый Массив;\n' +
@@ -68,60 +88,186 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',system-ui,sans-seri
     '    Сообщить(Элемент);\n' +
     'КонецЦикла;\n';
 
-  // ---- DOM refs ----
+  // ---- DOM ----
   var editorEl = document.getElementById('editor-container');
   var runBtn = document.getElementById('run-btn');
+  var saveBtn = document.getElementById('save-btn');
+  var newBtn = document.getElementById('new-btn');
+  var deleteBtn = document.getElementById('delete-btn');
   var outputBody = document.getElementById('output-body');
   var errorPanel = document.getElementById('error-panel');
   var timerEl = document.getElementById('timer');
+  var dirtyIndicator = document.getElementById('dirty-indicator');
+  var scriptList = document.getElementById('script-list');
 
   // ---- State ----
   var editor = null;
-  var saveTimer = null;
+  var currentId = null;
+  var scriptsCache = [];
+  var dirty = false;
+  var suppressDirty = false;
 
-  // ---- localStorage debounce ----
-  function scheduleSave(code) {
-    clearTimeout(saveTimer);
-    saveTimer = setTimeout(function() {
-      try { localStorage.setItem(LS_KEY, code); } catch(e) {}
-    }, 500);
+  // ---- Dirty helpers ----
+  function setDirty(value) {
+    if (suppressDirty) return;
+    dirty = value;
+    dirtyIndicator.textContent = dirty ? 'Изменено' : '';
+    saveBtn.disabled = !currentId || !dirty;
+  }
+
+  function confirmIfDirty() {
+    if (dirty) return confirm('Есть несохранённые изменения. Продолжить?');
+    return true;
+  }
+
+  // ---- Helpers ----
+  function formatDate(s) { return s ? s.slice(0, 10) : ''; }
+
+  function truncate(s, n) { return s && s.length > n ? s.slice(0, n) + '...' : s; }
+
+  // ---- Scripts CRUD ----
+  function loadScriptList() {
+    return fetch(API_SCRIPTS)
+      .then(function(r) { return r.json(); })
+      .then(function(list) {
+        scriptsCache = list;
+        renderScriptList();
+        return list;
+      })
+      .catch(function(err) {
+        errorPanel.textContent = 'Ошибка загрузки списка: ' + err.message;
+        errorPanel.style.display = 'block';
+        return [];
+      });
+  }
+
+  function renderScriptList() {
+    scriptList.innerHTML = '';
+    if (scriptsCache.length === 0) {
+      scriptList.innerHTML = '<div style="padding:12px;color:#6a6a6a;font-size:12px">Нет сценариев</div>';
+      return;
+    }
+    scriptsCache.forEach(function(s) {
+      var div = document.createElement('div');
+      div.className = 'script-item' + (s.id === currentId ? ' active' : '');
+      var nameEl = document.createElement('div');
+      nameEl.textContent = truncate(s.name || 'Без имени', 24);
+      var dateEl = document.createElement('div');
+      dateEl.className = 'date';
+      dateEl.textContent = formatDate(s.updated_at);
+      div.appendChild(nameEl);
+      div.appendChild(dateEl);
+      div.addEventListener('click', function() { openScript(s.id); });
+      scriptList.appendChild(div);
+    });
+  }
+
+  function openScript(id) {
+    if (!editor) return;
+    if (id === currentId) return;
+    if (!confirmIfDirty()) return;
+    return fetch(API_SCRIPTS + '/' + id)
+      .then(function(r) { return r.json(); })
+      .then(function(s) {
+        if (s.error) return;
+        currentId = s.id;
+        suppressDirty = true;
+        editor.setValue(s.source || '');
+        suppressDirty = false;
+        setDirty(false);
+        renderScriptList();
+        return s;
+      })
+      .catch(function() {});
+  }
+
+  function saveScript() {
+    if (!editor || !currentId) return;
+    var code = editor.getValue();
+    saveBtn.textContent = 'Сохранение...';
+    fetch(API_SCRIPTS + '/' + currentId, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ source: code })
+    })
+      .then(function(r) { return r.json(); })
+      .then(function(s) {
+        if (s.error) { saveBtn.textContent = 'Ошибка'; return; }
+        setDirty(false);
+        saveBtn.textContent = 'Сохранено';
+        loadScriptList();
+        setTimeout(function() { saveBtn.textContent = 'Сохранить'; }, 1500);
+      })
+      .catch(function() { saveBtn.textContent = 'Ошибка'; });
+  }
+
+  function newScript() {
+    if (!editor) return;
+    if (!confirmIfDirty()) return;
+    saveBtn.textContent = 'Создание...';
+    fetch(API_SCRIPTS, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name: 'Новый сценарий', source: STARTER_CODE })
+    })
+      .then(function(r) { return r.json(); })
+      .then(function(s) {
+        if (s.error) { saveBtn.textContent = 'Ошибка'; return; }
+        currentId = s.id;
+        suppressDirty = true;
+        editor.setValue(s.source || '');
+        suppressDirty = false;
+        setDirty(false);
+        saveBtn.textContent = 'Сохранить';
+        loadScriptList();
+      })
+      .catch(function() { saveBtn.textContent = 'Ошибка'; });
+  }
+
+  function deleteScript() {
+    if (!currentId || !editor) return;
+    if (!confirm('Удалить сценарий?')) return;
+    var deletedId = currentId;
+    fetch(API_SCRIPTS + '/' + currentId, { method: 'DELETE' })
+      .then(function() {
+        currentId = null;
+        setDirty(false);
+        return loadScriptList();
+      })
+      .then(function(list) {
+        var next = list.filter(function(s) { return s.id !== deletedId; })[0];
+        if (next) return openScript(next.id);
+        return newScript();
+      })
+      .catch(function() {});
   }
 
   // ---- Execute ----
   function execute() {
     if (!editor) return;
-
     var code = editor.getValue();
-    scheduleSave(code);
 
-    // Clear previous results
     outputBody.innerHTML = '<div class="output-empty">Выполнение...</div>';
     errorPanel.style.display = 'none';
     errorPanel.textContent = '';
     timerEl.textContent = '';
 
-    // Reset Monaco markers
     var model = editor.getModel();
-    if (model) {
-      monaco.editor.setModelMarkers(model, 'dsl', []);
-    }
+    if (model) monaco.editor.setModelMarkers(model, 'dsl', []);
 
-    // Disable button during execution
     runBtn.disabled = true;
     runBtn.textContent = 'Выполнение...';
-
     var tStart = performance.now();
 
-    fetch(API_URL, {
+    fetch(API_EXEC, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ code: code })
     })
-    .then(function(res) { return res.json(); })
+    .then(function(r) { return r.json(); })
     .then(function(data) {
       var elapsed = Math.round(performance.now() - tStart);
 
-      // Output
       outputBody.innerHTML = '';
       if (data.output && data.output.length > 0) {
         data.output.forEach(function(line) {
@@ -134,65 +280,40 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',system-ui,sans-seri
         outputBody.innerHTML = '<div class="output-empty">(пустой вывод)</div>';
       }
 
-      // Error
       if (!data.success && data.error) {
         errorPanel.textContent = 'Ошибка: ' + data.error.message;
-        if (data.error.stack) {
-          errorPanel.textContent += '\n' + data.error.stack;
-        }
         errorPanel.style.display = 'block';
       }
 
-      // Diagnostics
       var diags = data.diagnostics || [];
       if (diags.length > 0) {
         var markerData = [];
         diags.forEach(function(d) {
-          var cls = 'diag-' + d.severity;
           var div = document.createElement('div');
-          div.className = cls;
-          var msg = (d.severity.toUpperCase()) + ': ' + d.message;
+          div.className = 'diag-' + d.severity;
+          var msg = d.severity.toUpperCase() + ': ' + d.message;
           if (d.line != null) msg += ' (строка ' + d.line + ')';
           div.textContent = msg;
           outputBody.appendChild(div);
-
-          // Monaco marker
-          if (d.line != null && d.column != null) {
+          if (d.line != null) {
             markerData.push({
               severity: d.severity === 'error' ? monaco.MarkerSeverity.Error
                        : d.severity === 'warning' ? monaco.MarkerSeverity.Warning
                        : monaco.MarkerSeverity.Info,
               message: d.message,
               startLineNumber: d.line,
-              startColumn: d.column,
+              startColumn: d.column || 1,
               endLineNumber: d.line,
-              endColumn: d.column + 1
-            });
-          } else if (d.line != null) {
-            markerData.push({
-              severity: d.severity === 'error' ? monaco.MarkerSeverity.Error
-                       : d.severity === 'warning' ? monaco.MarkerSeverity.Warning
-                       : monaco.MarkerSeverity.Info,
-              message: d.message,
-              startLineNumber: d.line,
-              startColumn: 1,
-              endLineNumber: d.line,
-              endColumn: 1
+              endColumn: (d.column || 1) + 1
             });
           }
         });
-
-        if (markerData.length > 0) {
-          monaco.editor.setModelMarkers(model, 'dsl', markerData);
-        }
+        if (markerData.length > 0) monaco.editor.setModelMarkers(model, 'dsl', markerData);
       }
 
-      // Timing
-      if (data.timings) {
-        timerEl.textContent = data.timings.compileMs + 'ms compile / ' + data.timings.executeMs + 'ms execute';
-      } else {
-        timerEl.textContent = elapsed + 'ms';
-      }
+      timerEl.textContent = data.timings
+        ? data.timings.compileMs + 'ms / ' + data.timings.executeMs + 'ms'
+        : elapsed + 'ms';
     })
     .catch(function(err) {
       outputBody.innerHTML = '';
@@ -206,21 +327,13 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',system-ui,sans-seri
     });
   }
 
-  // ---- Init Monaco ----
+  // ---- Init ----
   var MONACO_BASE = 'https://cdn.jsdelivr.net/npm/monaco-editor@0.52.2/min/vs';
-
-  require.config({
-    paths: { vs: MONACO_BASE }
-  });
+  require.config({ paths: { vs: MONACO_BASE } });
 
   require(['vs/editor/editor.main'], function() {
-    // Load saved code or starter
-    var savedCode = '';
-    try { savedCode = localStorage.getItem(LS_KEY) || ''; } catch(e) {}
-    if (!savedCode) savedCode = STARTER_CODE;
-
     editor = monaco.editor.create(editorEl, {
-      value: savedCode,
+      value: STARTER_CODE,
       language: 'plaintext',
       theme: 'vs-dark',
       fontSize: 14,
@@ -228,27 +341,33 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',system-ui,sans-seri
       minimap: { enabled: false },
       automaticLayout: true,
       scrollBeyondLastLine: false,
-      renderWhitespace: 'selection',
       tabSize: 4,
       insertSpaces: true,
-      lineNumbers: 'on',
-      glyphMargin: false,
       folding: false,
       lineDecorationsWidth: 8,
       lineNumbersMinChars: 3,
       padding: { top: 8 }
     });
 
-    // Auto-save on change
     editor.onDidChangeModelContent(function() {
-      scheduleSave(editor.getValue());
+      setDirty(true);
     });
 
-    // Ctrl+Enter
+    // Keyboard shortcuts
     editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.Enter, execute);
+    editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyS, saveScript);
 
-    // Button
+    // Buttons
     runBtn.addEventListener('click', execute);
+    saveBtn.addEventListener('click', saveScript);
+    newBtn.addEventListener('click', newScript);
+    deleteBtn.addEventListener('click', deleteScript);
+
+    setDirty(false);
+    loadScriptList().then(function(list) {
+      if (list.length > 0) openScript(list[0].id);
+      else newScript();
+    });
   });
 })();
 </script>

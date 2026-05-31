@@ -1,0 +1,14 @@
+{
+  "extends": "./tsconfig.json",
+  "include": [
+    "compiler/**/*.ts",
+    "runtime/**/*.ts",
+    "server/**/*.ts",
+    "index.ts"
+  ],
+  "exclude": [
+    "tests",
+    "node_modules",
+    "public"
+  ]
+}

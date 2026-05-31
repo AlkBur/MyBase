@@ -1,5 +1,6 @@
 import { Database } from "bun:sqlite";
 import { readFileSync, existsSync } from "fs";
+import { resolve, join, extname } from "path";
 import { createServerRuntime, setDefaultServerRuntime } from "../runtime/shared/execute";
 import type { ExecutionResult } from "../runtime/shared/types";
 
@@ -19,7 +20,6 @@ interface ExecuteResponse {
   }[];
   error?: {
     message: string;
-    stack?: string;
   };
   timings?: {
     compileMs: number;
@@ -41,6 +41,37 @@ const MIME_TYPES: Record<string, string> = {
   ".svg": "image/svg+xml",
 };
 
+type JsonObject = Record<string, unknown>;
+
+const PUBLIC_ROOT = resolve("public");
+
+function jsonResponse(value: unknown, init: ResponseInit = {}): Response {
+  return new Response(JSON.stringify(value), {
+    ...init,
+    headers: {
+      "Content-Type": "application/json",
+      ...(init.headers ?? {}),
+    },
+  });
+}
+
+async function readJsonObject(req: Request): Promise<JsonObject> {
+  const body = await req.json();
+  return body && typeof body === "object" && !Array.isArray(body)
+    ? body as JsonObject
+    : {};
+}
+
+function getStringField(body: JsonObject, key: string, fallback = ""): string {
+  const value = body[key];
+  return typeof value === "string" ? value : fallback;
+}
+
+function getCurrentUser(_req: Request): { id: string; name: string } {
+  // Auth boundary: replace with cookie/session lookup when authorization lands.
+  return { id: "dev-user", name: "Developer" };
+}
+
 // ======================================================================
 //  Инициализация runtime
 // ======================================================================
@@ -49,6 +80,18 @@ const DB_PATH = "data.db";
 const db = new Database(DB_PATH);
 const runtime = createServerRuntime(db);
 setDefaultServerRuntime(runtime);
+
+// ======================================================================
+//  SQLite — таблица scripts (Phase B)
+// ======================================================================
+
+db.run(`CREATE TABLE IF NOT EXISTS scripts (
+  id TEXT PRIMARY KEY,
+  name TEXT NOT NULL DEFAULT 'Без имени',
+  source TEXT NOT NULL DEFAULT '',
+  created_at TEXT NOT NULL DEFAULT (datetime('now')),
+  updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+)`);
 
 // ======================================================================
 //  Преобразование ExecutionResult → ExecuteResponse
@@ -69,7 +112,6 @@ function mapResult(result: ExecutionResult): ExecuteResponse {
   if (result.error) {
     response.error = {
       message: result.error.message,
-      stack: result.error.stack,
     };
   }
 
@@ -91,13 +133,17 @@ function mapResult(result: ExecutionResult): ExecuteResponse {
 
 function serveStatic(pathname: string): Response {
   if (pathname === "/") pathname = "/index.html";
-  const filePath = `public${pathname}`;
+  const filePath = resolve(join(PUBLIC_ROOT, decodeURIComponent(pathname)));
+
+  if (filePath !== PUBLIC_ROOT && !filePath.startsWith(PUBLIC_ROOT + "\\")) {
+    return new Response("Not found", { status: 404 });
+  }
 
   if (!existsSync(filePath)) {
     return new Response("Not found", { status: 404 });
   }
 
-  const ext = filePath.slice(filePath.lastIndexOf("."));
+  const ext = extname(filePath);
   const contentType = MIME_TYPES[ext] ?? "application/octet-stream";
   const content = readFileSync(filePath);
   return new Response(content, {
@@ -117,34 +163,96 @@ Bun.serve({
   async fetch(req: Request): Promise<Response> {
     const url = new URL(req.url);
     const pathname = url.pathname;
+    const user = getCurrentUser(req);
+    void user;
 
     // POST /api/v1/execute — выполнение DSL-кода
     if (pathname === "/api/v1/execute" && req.method === "POST") {
       try {
-        const body = await req.json();
-        const code: string = body.code ?? "";
+        const body = await readJsonObject(req);
+        const code = getStringField(body, "code");
 
         // Runtime синхронный, но оборачиваем в Promise для будущей async-совместимости
         const result = await Promise.resolve().then(() =>
           runtime.execute({ code })
         );
 
-        return new Response(JSON.stringify(mapResult(result)), {
-          headers: { "Content-Type": "application/json" },
-        });
+        return jsonResponse(mapResult(result));
       } catch (e: any) {
-        return new Response(
-          JSON.stringify({
+        return jsonResponse(
+          {
             success: false,
             output: [],
             diagnostics: [],
             error: { message: e.message ?? "Unknown error" },
-          }),
+          },
           {
             status: 500,
-            headers: { "Content-Type": "application/json" },
           }
         );
+      }
+    }
+
+    // ---- CRUD: /api/v1/scripts ----
+    if (pathname === "/api/v1/scripts") {
+      if (req.method === "GET") {
+        const rows = db.query("SELECT id, name, source, created_at, updated_at FROM scripts ORDER BY updated_at DESC").all();
+        return jsonResponse(rows);
+      }
+      if (req.method === "POST") {
+        try {
+          const body = await readJsonObject(req);
+          const id = crypto.randomUUID();
+          const name = getStringField(body, "name", "Без имени");
+          const source = getStringField(body, "source");
+          db.run("INSERT INTO scripts (id, name, source) VALUES (?, ?, ?)", [id, name, source]);
+          const row = db.query("SELECT id, name, source, created_at, updated_at FROM scripts WHERE id = ?").get(id);
+          return jsonResponse(row, { status: 201 });
+        } catch (e: any) {
+          return jsonResponse({ error: e.message }, { status: 400 });
+        }
+      }
+    }
+
+    // ---- CRUD: /api/v1/scripts/:id ----
+    const scriptsMatch = pathname.match(/^\/api\/v1\/scripts\/([^\/]+)$/);
+    if (scriptsMatch) {
+      const id = scriptsMatch[1];
+      if (!id) return jsonResponse({ error: "Not found" }, { status: 404 });
+
+      if (req.method === "GET") {
+        const row = db.query("SELECT id, name, source, created_at, updated_at FROM scripts WHERE id = ?").get(id);
+        if (!row) return jsonResponse({ error: "Not found" }, { status: 404 });
+        return jsonResponse(row);
+      }
+
+      if (req.method === "PUT") {
+        try {
+          const body = await readJsonObject(req);
+          const name = typeof body.name === "string" ? body.name : undefined;
+          const source = typeof body.source === "string" ? body.source : undefined;
+
+          if (name !== undefined && source !== undefined) {
+            db.run("UPDATE scripts SET name = ?, source = ?, updated_at = datetime('now') WHERE id = ?", [name, source, id]);
+          } else if (name !== undefined) {
+            db.run("UPDATE scripts SET name = ?, updated_at = datetime('now') WHERE id = ?", [name, id]);
+          } else if (source !== undefined) {
+            db.run("UPDATE scripts SET source = ?, updated_at = datetime('now') WHERE id = ?", [source, id]);
+          } else {
+            return jsonResponse({ error: "No fields to update" }, { status: 400 });
+          }
+
+          const row = db.query("SELECT id, name, source, created_at, updated_at FROM scripts WHERE id = ?").get(id);
+          if (!row) return jsonResponse({ error: "Not found" }, { status: 404 });
+          return jsonResponse(row);
+        } catch (e: any) {
+          return jsonResponse({ error: e.message }, { status: 400 });
+        }
+      }
+
+      if (req.method === "DELETE") {
+        db.run("DELETE FROM scripts WHERE id = ?", [id]);
+        return jsonResponse({ ok: true });
       }
     }
 

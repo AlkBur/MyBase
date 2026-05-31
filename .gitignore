@@ -1,5 +1,18 @@
 # dependencies (bun install)
 node_modules
+node_modules/
+
+# sqlite
+data.db
+*.db
+
+# build artifacts
+app.exe
+*.exe
+
+# debug artifacts
+debug-*
+*.log
 
 # output
 out

@@ -147,4 +147,4 @@ export const ABI_CONSTANTS: DSLRuntimeABI_v1_3_3 = Object.freeze({
     expression: "Limited sandbox: no DB, no Query; no statements; return-wrapped; recursion guard (execDepthHard=500)",
     fragment: "Full sandbox: DB + Query; NO declarations; shared context with parent; recursion guard (execDepthHard=500)",
   },
-}) as const;
+});

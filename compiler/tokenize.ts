@@ -46,7 +46,7 @@ for (const kw of KEYWORDS) {
   KEYWORD_CANONICAL[kw.toUpperCase()] = kw;
 }
 
-export type TokenType = "KEYWORD" | "IDENTIFIER" | "STRING" | "NUMBER" | "OPERATOR" | "EOF";
+export type TokenType = "KEYWORD" | "IDENTIFIER" | "STRING" | "NUMBER" | "DATE" | "OPERATOR" | "EOF";
 
 export interface Token {
   type: TokenType;
@@ -118,7 +118,7 @@ export function tokenize(source: string): Token[] {
       const startCol = col;
       while (i < source.length && /\d/.test(source.charAt(i))) { i++; col++; }
       // Десятичная часть: если следующий символ . и за ним цифра
-      if (source[i] === "." && i + 1 < source.length && /\d/.test(source[i + 1])) {
+      if (source[i] === "." && i + 1 < source.length && /\d/.test(source.charAt(i + 1))) {
         i++; col++; // потребляем .
         while (i < source.length && /\d/.test(source.charAt(i))) { i++; col++; }
       }
@@ -168,7 +168,7 @@ export function tokenize(source: string): Token[] {
       i++; col++;
       let value = "";
       while (i < source.length && source[i] !== "'") {
-        value += source[i]; i++; col++;
+        value += source.charAt(i); i++; col++;
       }
       if (i >= source.length) {
         throw new Error(`Незакрытая дата на строке ${startLine}`);

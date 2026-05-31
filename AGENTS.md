@@ -122,6 +122,11 @@ Product Roadmap имеет приоритет над Runtime Roadmap до зав
 | FormSession is transport-agnostic | Adopted |
 | HTTP is default transport for Release 0.1 | Adopted |
 | WebSocket transport is deferred until post-Release 0.1 | Adopted |
+| Parser implementation may migrate to Chevrotain | Deferred post-Release 0.1 |
+| Parser migrations must preserve AST compatibility | Adopted |
+| Existing test suite must pass without test modifications during migrations | Adopted |
+| Lit may replace UI rendering for Forms Alpha (Phase D) | Deferred until Phase D |
+| Webix layout concepts may be adopted (Phase E) | Deferred until Phase E |
 
 ---
 

@@ -265,6 +265,7 @@ export function createValueTable(): any {
 
     // Перемещаем строку
     const row = rows.splice(srcIdx, 1)[0];
+    if (!row) throw new DSRuntimeError("Значение индекса выходит за пределы диапазона");
     rows.splice(targetIdx, 0, row);
     invalidateIndexCaches(indexes);
   });
@@ -311,8 +312,10 @@ export function createValueTable(): any {
         }
         rows.push(row);
       }
-      rows[i].__values__[lower] = arr[i];
-      (rows[i] as any)[colName] = arr[i];
+      const row = rows[i];
+      if (!row) continue;
+      row.__values__[lower] = arr[i];
+      (row as any)[colName] = arr[i];
     }
     invalidateIndexCaches(indexes);
   });
@@ -406,7 +409,8 @@ export function createValueTable(): any {
         .map((c: any) => c.Имя)
         .filter((name: string) => !groupLower.includes(name.toLowerCase()));
     }
-    const sumLower = sumColNames.map((n: string) => n.toLowerCase());
+    const resolvedSumColNames: string[] = sumColNames ?? [];
+    const sumLower = resolvedSumColNames.map((n: string) => n.toLowerCase());
 
     // ================================================================
     // Случай A: нет группировки — все строки в одну
@@ -471,7 +475,7 @@ export function createValueTable(): any {
       }
 
       const targetRow = groups.get(key);
-      for (const sumName of sumColNames) {
+      for (const sumName of resolvedSumColNames) {
         const lower = sumName.toLowerCase();
         const v = row.__values__[lower];
         if (typeof v === "number" && Number.isFinite(v)) {
@@ -604,12 +608,13 @@ export function createValueTable(): any {
       }
 
       const colName = tokens[0];
+      if (colName === undefined) continue;
       // Проверяем что колонка существует
       if (!columns.Найти(colName)) {
         throw new DSRuntimeError(`Колонка "${colName}" не найдена`);
       }
 
-      const dir = tokens.length >= 2 ? tokens[1].toUpperCase() : "ВОЗР";
+      const dir = tokens.length >= 2 ? tokens[1]!.toUpperCase() : "ВОЗР";
       if (dir !== "ВОЗР" && dir !== "УБЫВ") {
         throw new DSRuntimeError("Неверный параметр сортировки");
       }
