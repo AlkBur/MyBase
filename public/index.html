@@ -52,6 +52,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',system-ui,sans-seri
   <button class="success" id="new-btn">+ Новый</button>
   <button id="save-btn">Сохранить</button>
   <button class="danger" id="delete-btn">Удалить</button>
+  <span id="source-label" style="color:#6a6a6a;font-size:12px;display:none"></span>
   <select id="examples-select">
     <option value="">— Примеры —</option>
     <option value="hello">Приветствие</option>
@@ -113,17 +114,43 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',system-ui,sans-seri
 
   // ---- State ----
   var editor = null;
-  var currentId = null;
+  var currentId = null;       // id сценария (null = пример или новый)
+  var currentExample = null;  // имя файла примера (null = не пример)
   var scriptsCache = [];
   var dirty = false;
   var suppressDirty = false;
+
+  // ---- Source helpers ----
+  function isScript() { return currentId !== null; }
+  function isExample() { return currentExample !== null; }
 
   // ---- Dirty helpers ----
   function setDirty(value) {
     if (suppressDirty) return;
     dirty = value;
     dirtyIndicator.textContent = dirty ? 'Изменено' : '';
-    saveBtn.disabled = !currentId || !dirty;
+    updateSaveButton();
+    deleteBtn.disabled = !isScript();
+  }
+
+  function updateSaveButton() {
+    if (!isScript()) {
+      saveBtn.textContent = 'Сохранить как...';
+      saveBtn.disabled = false;
+    } else {
+      saveBtn.textContent = 'Сохранить';
+      saveBtn.disabled = !dirty;
+    }
+  }
+
+  function updateSourceLabel() {
+    var el = document.getElementById('source-label');
+    if (isExample()) {
+      el.textContent = 'Пример: ' + currentExample;
+      el.style.display = '';
+    } else {
+      el.style.display = 'none';
+    }
   }
 
   function confirmIfDirty() {
@@ -175,26 +202,52 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',system-ui,sans-seri
 
   function openScript(id) {
     if (!editor) return;
-    if (id === currentId) return;
+    if (id === currentId && isScript()) return;
     if (!confirmIfDirty()) return;
     return fetch(API_SCRIPTS + '/' + id)
       .then(function(r) { return r.json(); })
       .then(function(s) {
         if (s.error) return;
         currentId = s.id;
+        currentExample = null;
         suppressDirty = true;
         editor.setValue(s.source || '');
         suppressDirty = false;
         setDirty(false);
         renderScriptList();
+        updateSourceLabel();
         return s;
       })
       .catch(function() {});
   }
 
   function saveScript() {
-    if (!editor || !currentId) return;
+    if (!editor) return;
     var code = editor.getValue();
+
+    // Пример / новый → создаём сценарий
+    if (!isScript()) {
+      saveBtn.textContent = 'Создание...';
+      fetch(API_SCRIPTS, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: 'Новый сценарий', source: code })
+      })
+        .then(function(r) { return r.json(); })
+        .then(function(s) {
+          if (s.error) { saveBtn.textContent = 'Ошибка'; return; }
+          currentId = s.id;
+          currentExample = null;
+          setDirty(false);
+          updateSourceLabel();
+          renderScriptList();
+          updateSaveButton();
+        })
+        .catch(function() { saveBtn.textContent = 'Ошибка'; });
+      return;
+    }
+
+    // Существующий сценарий — PUT
     saveBtn.textContent = 'Сохранение...';
     fetch(API_SCRIPTS + '/' + currentId, {
       method: 'PUT',
@@ -205,9 +258,8 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',system-ui,sans-seri
       .then(function(s) {
         if (s.error) { saveBtn.textContent = 'Ошибка'; return; }
         setDirty(false);
-        saveBtn.textContent = 'Сохранено';
         loadScriptList();
-        setTimeout(function() { saveBtn.textContent = 'Сохранить'; }, 1500);
+        updateSaveButton();
       })
       .catch(function() { saveBtn.textContent = 'Ошибка'; });
   }
@@ -225,11 +277,13 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',system-ui,sans-seri
       .then(function(s) {
         if (s.error) { saveBtn.textContent = 'Ошибка'; return; }
         currentId = s.id;
+        currentExample = null;
         suppressDirty = true;
         editor.setValue(s.source || '');
         suppressDirty = false;
         setDirty(false);
-        saveBtn.textContent = 'Сохранить';
+        updateSourceLabel();
+        updateSaveButton();
         loadScriptList();
       })
       .catch(function() { saveBtn.textContent = 'Ошибка'; });
@@ -242,7 +296,9 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',system-ui,sans-seri
     fetch(API_SCRIPTS + '/' + currentId, { method: 'DELETE' })
       .then(function() {
         currentId = null;
+        currentExample = null;
         setDirty(false);
+        updateSourceLabel();
         return loadScriptList();
       })
       .then(function(list) {
@@ -274,12 +330,14 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',system-ui,sans-seri
         return r.text();
       })
       .then(function(code) {
+        currentId = null;
+        currentExample = ex.name;
         suppressDirty = true;
         editor.setValue(code);
         suppressDirty = false;
-        currentId = null;
         setDirty(false);
         renderScriptList();
+        updateSourceLabel();
       })
       .catch(function(err) {
         errorPanel.textContent = 'Ошибка загрузки примера: ' + err.message;
@@ -290,9 +348,13 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',system-ui,sans-seri
   function downloadScript() {
     if (!editor) return;
     var code = editor.getValue();
-    var name = (currentId
-      ? (scriptsCache.filter(function(s) { return s.id === currentId; })[0] || {}).name
-      : undefined) || 'script';
+    var name = 'script';
+    if (isScript()) {
+      var s = scriptsCache.filter(function(s) { return s.id === currentId; })[0];
+      if (s) name = s.name;
+    } else if (isExample()) {
+      name = currentExample.replace(/\.os$/, '');
+    }
     var blob = new Blob([code], { type: 'text/plain;charset=utf-8' });
     var a = document.createElement('a');
     a.href = URL.createObjectURL(blob);
@@ -431,6 +493,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',system-ui,sans-seri
     });
 
     setDirty(false);
+    updateSourceLabel();
     loadScriptList().then(function(list) {
       if (list.length > 0) openScript(list[0].id);
       else newScript();
