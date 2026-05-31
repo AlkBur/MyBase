@@ -480,13 +480,18 @@ ClientRuntime = stub
 
 ## Current Focus
 
-Текущая активная задача проекта:
+Release 0.1 завершён (Playground + Storage + Examples).
 
 ```text
-Phase A — Web Playground
+Release 0.1 ✅
 ```
 
-Все остальные направления считаются замороженными до завершения Release 0.1.
+Следующие направления (план):
+- Phase D — Forms Alpha (Product Roadmap)
+- v1.4 Phase B–G (Runtime Roadmap: member dispatch, hardening)
+
+Приоритет Product Roadmap сохранён — Forms Alpha следующая.
+Runtime Roadmap возобновляется только после согласования с Product Roadmap.
 
 ---
 
@@ -494,8 +499,12 @@ Phase A — Web Playground
 
 ```bash
 bun run start         # запуск server runtime
+bun run web           # HTTP playground (port 3000)
+bun run typecheck     # tsc --noEmit (app-only)
 bun run tests/runner.ts        # golden tests (check mode)
 bun run tests/runner.ts --update   # golden tests (update snapshots)
+bun run test:abi           # ABI assertions (9)
+bun run test:compile:invariants    # compile invariants (17)
 bun run build         # сборка в EXE
 bun run clean         # удалить data.db и app.exe
 ```
@@ -549,9 +558,14 @@ bun run clean         # удалить data.db и app.exe
   runner.ts           ← multi-runtime golden test runner (рекурсивный **/*.os)
 
 /server
+  dev-server.ts       ← HTTP API (POST /api/v1/execute) — Фаза 3
 
 /server
-  dev-server.ts       ← HTTP API (POST /api/v1/execute) — Фаза 3
+  web.ts              ← Bun.serve — CRUD + static + execute (Phase B)
+
+public/
+  index.html          ← Monaco Editor playground + sidebar + examples (Phase A–C)
+  examples/           ← встроенные примеры (hello, loops, arrays, functions, objects)
 
 index.ts              ← точка входа (server runtime)
 
