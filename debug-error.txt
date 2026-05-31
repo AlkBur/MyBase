@@ -1,8 +1,6 @@
-Error: Ошибка при вызове метода контекста (Добавить)
-Stack: Error: Ошибка при вызове метода контекста (Добавить)
-    at value (D:\PROJECTS\fresh\runtime\shared\objects\helpers.ts:32:30)
-    at anonymous (file:///D:/PROJECTS/fresh/runtime/server/runtime.ts:4:72)
-    at execute (D:\PROJECTS\fresh\runtime\server\runtime.ts:260:28)
-    at <anonymous> (D:\PROJECTS\fresh\tests\invariants\member-access.invariant.ts:191:18)
-    at runInvariant (D:\PROJECTS\fresh\tests\invariants\member-access.invariant.ts:30:5)
-    at D:\PROJECTS\fresh\tests\invariants\member-access.invariant.ts:186
+Error: Функция "Собщить" не определена на строке 2
+Stack: Error: Функция "Собщить" не определена на строке 2
+    at parseStatements (D:\PROJECTS\MyBase\compiler\compile.ts:1079:23)
+    at compileProgram (D:\PROJECTS\MyBase\compiler\compile.ts:1197:10)
+    at execute (D:\PROJECTS\MyBase\runtime\server\runtime.ts:250:37)
+    at D:\PROJECTS\MyBase\tests\runner.ts:153:22
